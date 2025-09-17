@@ -1,0 +1,18 @@
+{
+  "appTitle": "TurnoTrack",
+  "loginTitle": "Iniciar sesion",
+  "homeWelcome": "Hola {name}",
+  "registroEntrada": "Registrar entrada",
+  "registroSalida": "Registrar salida",
+  "gestionTitle": "Gestion de personal",
+  "analiticaTitle": "Analitica",
+  "desempenoTitle": "Desempeno e IA",
+  "@homeWelcome": {
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Carolina"
+      }
+    }
+  }
+}
