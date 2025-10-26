@@ -22,6 +22,7 @@ TurnoTrack digitaliza el control de asistencia operacional combinando verificaci
 - `flutter analyze` — linting con `flutter_lints`.
 - `flutter test` — ejecuta la pirámide de pruebas.
 - `flutter run -d device_id --dart-define=SUPABASE_URL=...` — arranca en un dispositivo específico.
+- `flutter test --coverage` — genera reporte de cobertura para CI.
 
 ## Módulos y rutas principales
 - `auth`: flujo de inicio de sesión (`/login`).
