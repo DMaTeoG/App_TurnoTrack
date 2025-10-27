@@ -1,8 +1,15 @@
-﻿class AppConstants {
-  static const supabaseUrl =
-      String.fromEnvironment('https://ixfdivaywaixpqcpednr.supabase.co', defaultValue: '');
-  static const supabaseAnonKey =
-      String.fromEnvironment('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4ZmRpdmF5d2FpeHBxY3BlZG5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0NDQ4NjcsImV4cCI6MjA3NzAyMDg2N30.c_CKH5aCNjz38_eKNGf4zIzdlVALeXg7MBXMWHlj2HE', defaultValue: '');
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+class AppConstants {
+  static const _supabaseUrlEnv = String.fromEnvironment('SUPABASE_URL');
+  static const _supabaseAnonKeyEnv = String.fromEnvironment('SUPABASE_ANON_KEY');
+
+  static String get supabaseUrl =>
+      _supabaseUrlEnv.isNotEmpty ? _supabaseUrlEnv : dotenv.env['SUPABASE_URL'] ?? '';
+
+  static String get supabaseAnonKey => _supabaseAnonKeyEnv.isNotEmpty
+      ? _supabaseAnonKeyEnv
+      : dotenv.env['SUPABASE_ANON_KEY'] ?? '';
 
   static const registrosBucket = 'registros';
   static const exportsBucket = 'exports';
@@ -12,4 +19,3 @@
 
   static const coachingMaxTips = 3;
 }
-

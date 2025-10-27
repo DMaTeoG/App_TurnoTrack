@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,10 +11,15 @@ import 'core/config/constants.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (AppConstants.supabaseUrl.isEmpty ||
-      AppConstants.supabaseAnonKey.isEmpty) {
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (error) {
+    debugPrint('Dotenv load skipped: $error');
+  }
+
+  if (AppConstants.supabaseUrl.isEmpty || AppConstants.supabaseAnonKey.isEmpty) {
     throw Exception(
-      'Missing SUPABASE_URL or SUPABASE_ANON_KEY. Provide them using --dart-define.',
+      'Missing SUPABASE_URL or SUPABASE_ANON_KEY. Configure them in .env or with --dart-define.',
     );
   }
 
@@ -48,4 +54,3 @@ class TurnoTrackApp extends ConsumerWidget {
     );
   }
 }
-

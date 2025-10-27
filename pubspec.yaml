@@ -41,12 +41,14 @@ dependencies:
   camera: ^0.10.5+9
   intl: ^0.20.2
   uuid: ^4.4.0
+  flutter_dotenv: ^5.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
   mocktail: ^1.0.3
+  shared_preferences: ^2.3.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
