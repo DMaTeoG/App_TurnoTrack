@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/providers/connectivity_provider.dart';
-import '../../../core/widgets/gradient_background.dart';
 import '../../../core/widgets/section_card.dart';
 import '../data/analytics_repo.dart';
 
