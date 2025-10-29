@@ -24,6 +24,7 @@ class MisConsejosPage extends ConsumerWidget {
     final consejosAsync = ref.watch(consejosProvider);
 
     return AppScaffold(
+      showDock: true,
       title: const Text('Mis consejos IA'),
       body: consejosAsync.when(
         data: (consejos) {

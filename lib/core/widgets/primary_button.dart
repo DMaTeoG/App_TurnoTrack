@@ -37,12 +37,21 @@ class PrimaryButton extends StatelessWidget {
             : (icon ?? const SizedBox.shrink()),
         label: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 6),
-          child: Text(label, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onPrimary)),
+          child: Text(
+            label,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.onPrimary,
+            ),
+          ),
         ),
         style: ButtonStyle(
           minimumSize: MaterialStateProperty.all(const Size.fromHeight(52)),
-          padding: MaterialStateProperty.all(const EdgeInsets.symmetric(horizontal: 16)),
-          shape: MaterialStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+          padding: MaterialStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: 16),
+          ),
+          shape: MaterialStateProperty.all(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
           elevation: MaterialStateProperty.resolveWith<double>((states) {
             if (states.contains(MaterialState.disabled)) return 0;
             if (states.contains(MaterialState.pressed)) return 2;
@@ -51,11 +60,13 @@ class PrimaryButton extends StatelessWidget {
           }),
           backgroundColor: MaterialStateProperty.resolveWith<Color>((states) {
             final base = theme.colorScheme.primary;
-            if (states.contains(MaterialState.disabled)) return base.withOpacity(0.5);
+            if (states.contains(MaterialState.disabled))
+              return base.withOpacity(0.5);
             return base;
           }),
           overlayColor: MaterialStateProperty.resolveWith<Color?>((states) {
-            if (states.contains(MaterialState.pressed)) return Colors.black.withOpacity(0.08);
+            if (states.contains(MaterialState.pressed))
+              return Colors.black.withOpacity(0.08);
             return null;
           }),
         ),

@@ -8,16 +8,24 @@ class DockNav extends StatelessWidget {
 
   static const _items = <_DockItem>[
     _DockItem(icon: Icons.home_outlined, label: 'Inicio', route: '/home'),
-    _DockItem(icon: Icons.edit_note_outlined, label: 'Registro', route: '/registro'),
+    _DockItem(
+      icon: Icons.edit_note_outlined,
+      label: 'Registro',
+      route: '/registro',
+    ),
     _DockItem(icon: Icons.group_outlined, label: 'Gestión', route: '/gestion'),
-    _DockItem(icon: Icons.analytics_outlined, label: 'Analítica', route: '/analitica'),
+    _DockItem(
+      icon: Icons.analytics_outlined,
+      label: 'Analítica',
+      route: '/analitica',
+    ),
     _DockItem(icon: Icons.person_outline, label: 'Perfil', route: '/perfil'),
   ];
 
   @override
   Widget build(BuildContext context) {
-  final router = GoRouter.of(context);
-  final current = Uri.base.path;
+    final router = GoRouter.of(context);
+    final current = Uri.base.path;
 
     return SafeArea(
       top: false,
@@ -60,14 +68,22 @@ class DockNav extends StatelessWidget {
 }
 
 class _DockItem {
-  const _DockItem({required this.icon, required this.label, required this.route});
+  const _DockItem({
+    required this.icon,
+    required this.label,
+    required this.route,
+  });
   final IconData icon;
   final String label;
   final String route;
 }
 
 class _DockButton extends StatefulWidget {
-  const _DockButton({required this.item, required this.selected, required this.onTap});
+  const _DockButton({
+    required this.item,
+    required this.selected,
+    required this.onTap,
+  });
   final _DockItem item;
   final bool selected;
   final VoidCallback onTap;
@@ -76,7 +92,8 @@ class _DockButton extends StatefulWidget {
   State<_DockButton> createState() => _DockButtonState();
 }
 
-class _DockButtonState extends State<_DockButton> with SingleTickerProviderStateMixin {
+class _DockButtonState extends State<_DockButton>
+    with SingleTickerProviderStateMixin {
   double _scale = 1.0;
 
   void _setHover(bool v) {
@@ -87,7 +104,9 @@ class _DockButtonState extends State<_DockButton> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.selected ? Theme.of(context).colorScheme.primary : Theme.of(context).iconTheme.color;
+    final color = widget.selected
+        ? Theme.of(context).colorScheme.primary
+        : Theme.of(context).iconTheme.color;
 
     final child = GestureDetector(
       onTap: widget.onTap,
@@ -101,13 +120,21 @@ class _DockButtonState extends State<_DockButton> with SingleTickerProviderState
           children: [
             Icon(widget.item.icon, size: 22, color: color),
             const SizedBox(height: 4),
-            Text(widget.item.label, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color)),
+            Text(
+              widget.item.label,
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: color),
+            ),
           ],
         ),
       ),
     );
 
-    if (kIsWeb || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux) {
+    if (kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux) {
       return MouseRegion(
         onEnter: (_) => _setHover(true),
         onExit: (_) => _setHover(false),

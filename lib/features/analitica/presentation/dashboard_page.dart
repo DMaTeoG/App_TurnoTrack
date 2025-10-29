@@ -27,6 +27,7 @@ class DashboardPage extends ConsumerWidget {
     final connectivity = ref.watch(connectivityProvider);
 
     return AppScaffold(
+      showDock: true,
       title: const Text('Dashboard analitico'),
       actions: [
         IconButton(

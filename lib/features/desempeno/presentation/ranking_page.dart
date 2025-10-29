@@ -17,8 +17,9 @@ class RankingPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final rankingAsync = ref.watch(rankingProvider);
 
-    return AppScaffold(
-      title: const Text('Ranking semanal'),
+      return AppScaffold(
+        showDock: true,
+        title: const Text('Ranking semanal'),
       actions: [
         IconButton(
           onPressed: () => context.go('/desempeno/mis-consejos'),

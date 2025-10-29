@@ -9,6 +9,7 @@ class GestionHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
+      showDock: true,
       title: const Text('Gestion de personal'),
       body: ListView(
         padding: const EdgeInsets.all(16),
