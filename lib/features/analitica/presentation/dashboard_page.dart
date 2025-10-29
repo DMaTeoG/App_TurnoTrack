@@ -2,6 +2,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/providers/connectivity_provider.dart';
 import '../data/analytics_repo.dart';
 
@@ -23,22 +24,20 @@ class DashboardPage extends ConsumerWidget {
     final seriesAsync = ref.watch(seriesHorasProvider);
     final connectivity = ref.watch(connectivityProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard analitico'),
-        actions: [
-          IconButton(
-            onPressed: () => context.go('/analitica/detalle'),
-            icon: const Icon(Icons.table_view),
-            tooltip: 'Detalle',
-          ),
-          IconButton(
-            onPressed: () => context.go('/analitica/mapa'),
-            icon: const Icon(Icons.map_outlined),
-            tooltip: 'Mapa',
-          ),
-        ],
-      ),
+    return AppScaffold(
+      title: const Text('Dashboard analitico'),
+      actions: [
+        IconButton(
+          onPressed: () => context.go('/analitica/detalle'),
+          icon: const Icon(Icons.table_view),
+          tooltip: 'Detalle',
+        ),
+        IconButton(
+          onPressed: () => context.go('/analitica/mapa'),
+          icon: const Icon(Icons.map_outlined),
+          tooltip: 'Mapa',
+        ),
+      ],
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(kpisProvider);
@@ -59,11 +58,11 @@ class DashboardPage extends ConsumerWidget {
                 runSpacing: 12,
                 children: [
                   for (final kpi in kpis)
-                    _KpiCard(
+                    SizedBox(width: 200, child: _KpiCard(
                       title: kpi.titulo,
                       value: kpi.valor.toStringAsFixed(1),
                       delta: kpi.variacion?.toDouble(),
-                    ),
+                    )),
                 ],
               ),
               loading: () => const Center(child: CircularProgressIndicator()),

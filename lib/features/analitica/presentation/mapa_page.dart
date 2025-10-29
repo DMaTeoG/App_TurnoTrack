@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/app_scaffold.dart';
 import '../data/analytics_repo.dart';
 
 final heatmapProvider = FutureProvider.autoDispose((ref) {
@@ -15,22 +16,33 @@ class MapaPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final puntosAsync = ref.watch(heatmapProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Mapa de registros')),
+    return AppScaffold(
+      title: const Text('Mapa de registros'),
       body: puntosAsync.when(
         data: (puntos) {
           if (puntos.isEmpty) {
-            return const Center(child: Text('Sin datos para la fecha seleccionada.'));
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.map_outlined, size: 64, color: Colors.grey),
+                  SizedBox(height: 8),
+                  Text('Sin datos para la fecha seleccionada.'),
+                ],
+              ),
+            );
           }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: puntos.length,
             itemBuilder: (context, index) {
               final punto = puntos[index];
-              return ListTile(
-                leading: const Icon(Icons.location_on_outlined),
-                title: Text('Lat ${punto.latitud.toStringAsFixed(4)}, Lng ${punto.longitud.toStringAsFixed(4)}'),
-                subtitle: Text('Registros: ${punto.conteo}'),
+              return Card(
+                child: ListTile(
+                  leading: const Icon(Icons.location_on_outlined),
+                  title: Text('Lat ${punto.latitud.toStringAsFixed(4)}, Lng ${punto.longitud.toStringAsFixed(4)}'),
+                  subtitle: Text('Registros: ${punto.conteo}'),
+                ),
               );
             },
           );

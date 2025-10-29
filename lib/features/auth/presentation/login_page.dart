@@ -64,7 +64,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
           child: Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             elevation: 4,
             margin: const EdgeInsets.all(24),
             child: Padding(
@@ -80,13 +82,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       child: CircleAvatar(
                         radius: 36,
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        child: const Icon(Icons.timelapse, color: Colors.white, size: 36),
+                        child: const Icon(
+                          Icons.timelapse,
+                          color: Colors.white,
+                          size: 36,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text('TurnoTrack', style: Theme.of(context).textTheme.headlineSmall),
+                    Text(
+                      'TurnoTrack',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
                     const SizedBox(height: 8),
-                    const Text('Inicia sesion para continuar', textAlign: TextAlign.center),
+                    const Text(
+                      'Inicia sesion para continuar',
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 20),
                     TextFormField(
                       controller: _emailController,
@@ -102,7 +114,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _passwordController,
-                      decoration: const InputDecoration(labelText: 'Contrasena'),
+                      decoration: const InputDecoration(
+                        labelText: 'Contrasena',
+                      ),
                       obscureText: true,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -113,10 +127,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     const SizedBox(height: 16),
                     if (_error != null)
-                      Text(
-                        _error!,
-                        style: const TextStyle(color: Colors.red),
-                      ),
+                      Text(_error!, style: const TextStyle(color: Colors.red)),
                     const SizedBox(height: 12),
                     PrimaryButton(
                       label: 'Ingresar',
@@ -139,4 +150,3 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 }
-

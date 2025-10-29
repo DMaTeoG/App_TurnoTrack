@@ -22,16 +22,17 @@ class PrimaryButton extends StatelessWidget {
           ? const SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
             )
           : (icon ?? const SizedBox.shrink()),
       label: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         child: Text(label),
       ),
-      style: ElevatedButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
-      ),
+      style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
     );
   }
 }

@@ -2,6 +2,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/app_scaffold.dart';
 import '../data/supervisores_repo.dart';
 import '../domain/supervisor.dart';
 
@@ -31,17 +32,15 @@ class _SupervisoresListPageState extends ConsumerState<SupervisoresListPage> {
   Widget build(BuildContext context) {
     final supervisoresAsync = ref.watch(supervisoresListProvider(_filtro));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Supervisores'),
-        actions: [
-          IconButton(
-            onPressed: () => context.go('/gestion/supervisores/nuevo'),
-            icon: const Icon(Icons.add),
-            tooltip: 'Nuevo supervisor',
-          ),
-        ],
-      ),
+    return AppScaffold(
+      title: const Text('Supervisores'),
+      actions: [
+        IconButton(
+          onPressed: () => context.go('/gestion/supervisores/nuevo'),
+          icon: const Icon(Icons.add),
+          tooltip: 'Nuevo supervisor',
+        ),
+      ],
       body: Column(
         children: [
           Padding(
@@ -65,21 +64,32 @@ class _SupervisoresListPageState extends ConsumerState<SupervisoresListPage> {
             child: supervisoresAsync.when(
               data: (items) {
                 if (items.isEmpty) {
-                  return const Center(child: Text('Sin supervisores registrados.'));
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.supervisor_account_outlined, size: 64, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('Sin supervisores registrados.'),
+                      ],
+                    ),
+                  );
                 }
                 return ListView.builder(
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final supervisor = items[index];
-                    return ListTile(
-                      leading: const Icon(Icons.supervisor_account_outlined),
-                      title: Text(supervisor.nombre),
-                      subtitle: Text(supervisor.documento),
-                      trailing: Icon(
-                        supervisor.activo ? Icons.check_circle : Icons.pause_circle,
-                        color: supervisor.activo ? Colors.green : Colors.orange,
+                    return Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.supervisor_account_outlined),
+                        title: Text(supervisor.nombre),
+                        subtitle: Text(supervisor.documento),
+                        trailing: Icon(
+                          supervisor.activo ? Icons.check_circle : Icons.pause_circle,
+                          color: supervisor.activo ? Colors.green : Colors.orange,
+                        ),
+                        onTap: () => context.go('/gestion/supervisores/${supervisor.id}'),
                       ),
-                      onTap: () => context.go('/gestion/supervisores/${supervisor.id}'),
                     );
                   },
                 );

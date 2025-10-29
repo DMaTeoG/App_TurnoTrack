@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/widgets/app_scaffold.dart';
 
 import '../data/empleados_repo.dart';
 import '../data/supervisores_repo.dart';
@@ -9,17 +10,18 @@ import '../domain/supervisor.dart';
 
 final empleadoDetalleProvider = FutureProvider.autoDispose
     .family<EmpleadoModel?, String>((ref, id) async {
-  try {
-    final lista = await ref.watch(empleadosRepositoryProvider).listar();
-    return lista.firstWhere((item) => item.id == id);
-  } catch (_) {
-    return null;
-  }
-});
+      try {
+        final lista = await ref.watch(empleadosRepositoryProvider).listar();
+        return lista.firstWhere((item) => item.id == id);
+      } catch (_) {
+        return null;
+      }
+    });
 
-final supervisoresComboProvider = FutureProvider.autoDispose<List<SupervisorModel>>(
-  (ref) => ref.watch(supervisoresRepositoryProvider).listar(),
-);
+final supervisoresComboProvider =
+    FutureProvider.autoDispose<List<SupervisorModel>>(
+      (ref) => ref.watch(supervisoresRepositoryProvider).listar(),
+    );
 
 class EmpleadoFormPage extends ConsumerStatefulWidget {
   const EmpleadoFormPage({super.key, this.empleadoId});
@@ -46,8 +48,9 @@ class _EmpleadoFormPageState extends ConsumerState<EmpleadoFormPage> {
     super.initState();
     if (widget.empleadoId != null) {
       Future.microtask(() async {
-        final empleado =
-            await ref.read(empleadoDetalleProvider(widget.empleadoId!).future);
+        final empleado = await ref.read(
+          empleadoDetalleProvider(widget.empleadoId!).future,
+        );
         if (!mounted || empleado == null) return;
         setState(() {
           _documentoController.text = empleado.documento;
@@ -104,11 +107,9 @@ class _EmpleadoFormPageState extends ConsumerState<EmpleadoFormPage> {
   Widget build(BuildContext context) {
     final supervisoresAsync = ref.watch(supervisoresComboProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.empleadoId == null ? 'Nuevo empleado' : 'Editar empleado',
-        ),
+    return AppScaffold(
+      title: Text(
+        widget.empleadoId == null ? 'Nuevo empleado' : 'Editar empleado',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -137,10 +138,14 @@ class _EmpleadoFormPageState extends ConsumerState<EmpleadoFormPage> {
                 decoration: const InputDecoration(labelText: 'Rol'),
                 items: const [
                   DropdownMenuItem(value: 'operador', child: Text('Operador')),
-                  DropdownMenuItem(value: 'supervisor', child: Text('Supervisor')),
+                  DropdownMenuItem(
+                    value: 'supervisor',
+                    child: Text('Supervisor'),
+                  ),
                   DropdownMenuItem(value: 'admin', child: Text('Admin')),
                 ],
-                onChanged: (value) => setState(() => _rol = value ?? 'operador'),
+                onChanged: (value) =>
+                    setState(() => _rol = value ?? 'operador'),
               ),
               const SizedBox(height: 12),
               supervisoresAsync.when(
@@ -149,7 +154,10 @@ class _EmpleadoFormPageState extends ConsumerState<EmpleadoFormPage> {
                   value: _supervisorId,
                   decoration: const InputDecoration(labelText: 'Supervisor'),
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('Sin asignar')),
+                    const DropdownMenuItem(
+                      value: null,
+                      child: Text('Sin asignar'),
+                    ),
                     for (final supervisor in supervisores)
                       DropdownMenuItem(
                         value: supervisor.id,
@@ -198,4 +206,3 @@ class _EmpleadoFormPageState extends ConsumerState<EmpleadoFormPage> {
     );
   }
 }
-

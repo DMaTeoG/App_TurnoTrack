@@ -1,8 +1,9 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers/supabase_client_provider.dart';
+import '../../../core/widgets/app_scaffold.dart';
 import '../data/desempeno_repo.dart';
+import '../../../core/providers/supabase_client_provider.dart';
 
 final consejosProvider = FutureProvider.autoDispose((ref) async {
   final session = ref.watch(currentSessionProvider);
@@ -22,13 +23,20 @@ class MisConsejosPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final consejosAsync = ref.watch(consejosProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Mis consejos IA')),
+    return AppScaffold(
+      title: const Text('Mis consejos IA'),
       body: consejosAsync.when(
         data: (consejos) {
           if (consejos.isEmpty) {
-            return const Center(
-              child: Text('Aun no tienes consejos generados para esta semana.'),
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.lightbulb_outline, size: 64, color: Colors.grey),
+                  SizedBox(height: 8),
+                  Text('Aun no tienes consejos generados para esta semana.'),
+                ],
+              ),
             );
           }
           return ListView.separated(
@@ -43,10 +51,8 @@ class MisConsejosPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Semana ${consejo.semana}',
-                        style: Theme.of(context).textTheme.labelLarge,
-                      ),
+                      Text('Semana ${consejo.semana}',
+                          style: Theme.of(context).textTheme.labelLarge),
                       const SizedBox(height: 8),
                       Text(consejo.mensajeEs),
                       if (consejo.mensajeEn != null) ...[

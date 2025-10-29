@@ -2,13 +2,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/app_scaffold.dart';
 import '../data/empleados_repo.dart';
 import '../domain/empleado.dart';
 
 final empleadosListProvider = FutureProvider.autoDispose
     .family<List<EmpleadoModel>, String>((ref, filtro) async {
-  return ref.watch(empleadosRepositoryProvider).listar(filtro: filtro);
-});
+      return ref.watch(empleadosRepositoryProvider).listar(filtro: filtro);
+    });
 
 class EmpleadosListPage extends ConsumerStatefulWidget {
   const EmpleadosListPage({super.key});
@@ -31,17 +32,15 @@ class _EmpleadosListPageState extends ConsumerState<EmpleadosListPage> {
   Widget build(BuildContext context) {
     final empleadosAsync = ref.watch(empleadosListProvider(_filtro));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Empleados'),
-        actions: [
-          IconButton(
-            onPressed: () => context.go('/gestion/empleados/nuevo'),
-            icon: const Icon(Icons.add),
-            tooltip: 'Nuevo empleado',
-          ),
-        ],
-      ),
+    return AppScaffold(
+      title: const Text('Empleados'),
+      actions: [
+        IconButton(
+          onPressed: () => context.go('/gestion/empleados/nuevo'),
+          icon: const Icon(Icons.add),
+          tooltip: 'Nuevo empleado',
+        ),
+      ],
       body: Column(
         children: [
           Padding(
@@ -65,30 +64,37 @@ class _EmpleadosListPageState extends ConsumerState<EmpleadosListPage> {
             child: empleadosAsync.when(
               data: (empleados) {
                 if (empleados.isEmpty) {
-                  return const Center(child: Text('Sin empleados registrados.'));
+                  return const Center(
+                    child: Text('Sin empleados registrados.'),
+                  );
                 }
                 return ListView.builder(
                   itemCount: empleados.length,
                   itemBuilder: (context, index) {
                     final empleado = empleados[index];
-                    return ListTile(
-                      leading: const Icon(Icons.badge_outlined),
-                      title: Text(empleado.nombre),
-                      subtitle:
-                          Text('${empleado.documento} - ${empleado.rol}'),
-                      trailing: Icon(
-                        empleado.activo ? Icons.check_circle : Icons.pause_circle,
-                        color: empleado.activo ? Colors.green : Colors.orange,
+                    return Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.badge_outlined),
+                        title: Text(empleado.nombre),
+                        subtitle: Text(
+                          '${empleado.documento} - ${empleado.rol}',
+                        ),
+                        trailing: Icon(
+                          empleado.activo
+                              ? Icons.check_circle
+                              : Icons.pause_circle,
+                          color: empleado.activo ? Colors.green : Colors.orange,
+                        ),
+                        onTap: () =>
+                            context.go('/gestion/empleados/${empleado.id}'),
                       ),
-                      onTap: () => context.go('/gestion/empleados/${empleado.id}'),
                     );
                   },
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(
-                child: Text('Error al cargar empleados: $error'),
-              ),
+              error: (error, _) =>
+                  Center(child: Text('Error al cargar empleados: $error')),
             ),
           ),
         ],
@@ -96,5 +102,3 @@ class _EmpleadosListPageState extends ConsumerState<EmpleadosListPage> {
     );
   }
 }
-
-

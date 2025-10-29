@@ -12,7 +12,8 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(currentSessionProvider);
     final user = session?.user;
-    final displayName = (user?.userMetadata?['full_name'] as String?) ??
+    final displayName =
+        (user?.userMetadata?['full_name'] as String?) ??
         user?.email ??
         'Operador';
     final role = ref.watch(userRoleProvider);
@@ -39,14 +40,17 @@ class HomePage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Hola $displayName',
-                style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              'Hola $displayName',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 8),
             Chip(
               label: Text('Rol: ${role.name}'),
               avatar: const Icon(Icons.verified_user, size: 16),
-              backgroundColor:
-                  Theme.of(context).colorScheme.surfaceContainerHighest,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest,
             ),
             const SizedBox(height: 16),
             Expanded(
@@ -130,11 +134,7 @@ List<_HomeAction> _actionsForRole(UserRole role) {
           icon: Icons.photo_camera_front,
           route: '/registro/captura',
         ),
-        _HomeAction(
-          label: 'Gestion',
-          icon: Icons.group,
-          route: '/gestion',
-        ),
+        _HomeAction(label: 'Gestion', icon: Icons.group, route: '/gestion'),
         _HomeAction(
           label: 'Analitica',
           icon: Icons.analytics,
@@ -162,10 +162,7 @@ class _HomeAction {
 }
 
 class _HomeCard extends StatelessWidget {
-  const _HomeCard({
-    required this.action,
-    required this.onTap,
-  });
+  const _HomeCard({required this.action, required this.onTap});
 
   final _HomeAction action;
   final VoidCallback onTap;
@@ -179,7 +176,11 @@ class _HomeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 3)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: Material(
@@ -193,7 +194,11 @@ class _HomeCard extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(action.icon, size: 36, color: Theme.of(context).colorScheme.primary),
+                Icon(
+                  action.icon,
+                  size: 36,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(height: 12),
                 Text(
                   action.label,

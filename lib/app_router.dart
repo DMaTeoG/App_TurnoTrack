@@ -21,6 +21,35 @@ import 'features/registro/presentation/salida_page.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final session = ref.watch(currentSessionProvider);
+  Widget _transitionBuilder(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    // Fade + slide up subtle transition
+    final fade = CurvedAnimation(parent: animation, curve: Curves.easeInOut);
+    final offset = Tween<Offset>(
+      begin: const Offset(0, 0.02),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut));
+
+    return FadeTransition(
+      opacity: fade,
+      child: SlideTransition(position: offset, child: child),
+    );
+  }
+
+  CustomTransitionPage<T> _page<T>({
+    required Widget child,
+    required GoRouterState state,
+  }) {
+    return CustomTransitionPage<T>(
+      key: state.pageKey,
+      child: child,
+      transitionsBuilder: _transitionBuilder,
+    );
+  }
 
   return GoRouter(
     initialLocation: session == null ? '/login' : '/home',
@@ -28,48 +57,59 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         name: 'login',
-        builder: (context, state) => const LoginPage(),
+        pageBuilder: (context, state) =>
+            _page(child: const LoginPage(), state: state),
       ),
       GoRoute(
         path: '/home',
         name: 'home',
-        builder: (context, state) => const HomePage(),
+        pageBuilder: (context, state) =>
+            _page(child: const HomePage(), state: state),
       ),
       GoRoute(
         path: '/registro/captura',
         name: 'registro-captura',
-        builder: (context, state) => const CapturaPage(),
+        pageBuilder: (context, state) =>
+            _page(child: const CapturaPage(), state: state),
       ),
       GoRoute(
         path: '/registro/entrada',
         name: 'registro-entrada',
-        builder: (context, state) => const EntradaPage(),
+        pageBuilder: (context, state) =>
+            _page(child: const EntradaPage(), state: state),
       ),
       GoRoute(
         path: '/registro/salida',
         name: 'registro-salida',
-        builder: (context, state) => const SalidaPage(),
+        pageBuilder: (context, state) =>
+            _page(child: const SalidaPage(), state: state),
       ),
       GoRoute(
         path: '/gestion',
         name: 'gestion',
-        builder: (context, state) => const GestionHomePage(),
+        pageBuilder: (context, state) =>
+            _page(child: const GestionHomePage(), state: state),
         routes: [
           GoRoute(
             path: 'empleados',
             name: 'gestion-empleados',
-            builder: (context, state) => const EmpleadosListPage(),
+            pageBuilder: (context, state) =>
+                _page(child: const EmpleadosListPage(), state: state),
             routes: [
               GoRoute(
                 path: 'nuevo',
                 name: 'empleado-nuevo',
-                builder: (context, state) => const EmpleadoFormPage(),
+                pageBuilder: (context, state) =>
+                    _page(child: const EmpleadoFormPage(), state: state),
               ),
               GoRoute(
                 path: ':id',
                 name: 'empleado-detalle',
-                builder: (context, state) => EmpleadoFormPage(
-                  empleadoId: state.pathParameters['id'],
+                pageBuilder: (context, state) => _page(
+                  child: EmpleadoFormPage(
+                    empleadoId: state.pathParameters['id'],
+                  ),
+                  state: state,
                 ),
               ),
             ],
@@ -77,18 +117,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'supervisores',
             name: 'gestion-supervisores',
-            builder: (context, state) => const SupervisoresListPage(),
+            pageBuilder: (context, state) =>
+                _page(child: const SupervisoresListPage(), state: state),
             routes: [
               GoRoute(
                 path: 'nuevo',
                 name: 'supervisor-nuevo',
-                builder: (context, state) => const SupervisorFormPage(),
+                pageBuilder: (context, state) =>
+                    _page(child: const SupervisorFormPage(), state: state),
               ),
               GoRoute(
                 path: ':id',
                 name: 'supervisor-detalle',
-                builder: (context, state) => SupervisorFormPage(
-                  supervisorId: state.pathParameters['id'],
+                pageBuilder: (context, state) => _page(
+                  child: SupervisorFormPage(
+                    supervisorId: state.pathParameters['id'],
+                  ),
+                  state: state,
                 ),
               ),
             ],
@@ -98,38 +143,40 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/analitica',
         name: 'analitica',
-        builder: (context, state) => const DashboardPage(),
+        pageBuilder: (context, state) =>
+            _page(child: const DashboardPage(), state: state),
         routes: [
           GoRoute(
             path: 'mapa',
             name: 'analitica-mapa',
-            builder: (context, state) => const MapaPage(),
+            pageBuilder: (context, state) =>
+                _page(child: const MapaPage(), state: state),
           ),
           GoRoute(
             path: 'detalle',
             name: 'analitica-detalle',
-            builder: (context, state) => const DetallePage(),
+            pageBuilder: (context, state) =>
+                _page(child: const DetallePage(), state: state),
           ),
         ],
       ),
       GoRoute(
         path: '/desempeno',
         name: 'desempeno',
-        builder: (context, state) => const RankingPage(),
+        pageBuilder: (context, state) =>
+            _page(child: const RankingPage(), state: state),
         routes: [
           GoRoute(
             path: 'mis-consejos',
             name: 'mis-consejos',
-            builder: (context, state) => const MisConsejosPage(),
+            pageBuilder: (context, state) =>
+                _page(child: const MisConsejosPage(), state: state),
           ),
         ],
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Text('Ruta no encontrada: \'${state.uri}\''),
-      ),
+      body: Center(child: Text('Ruta no encontrada: \'${state.uri}\'')),
     ),
   );
 });
-

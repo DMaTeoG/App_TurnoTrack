@@ -1,6 +1,8 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/app_scaffold.dart';
+import '../../../core/widgets/primary_button.dart';
 import '../data/analytics_repo.dart';
 
 final detalleRegistrosProvider = FutureProvider.autoDispose
@@ -77,23 +79,21 @@ class _DetallePageState extends ConsumerState<DetallePage> {
   Widget build(BuildContext context) {
     final registrosAsync = ref.watch(detalleRegistrosProvider(_rango));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detalle y exportacion'),
-        actions: [
-          IconButton(
-            onPressed: _exportando ? null : _exportarCsv,
-            icon: _exportando
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.download_outlined),
-            tooltip: 'Exportar CSV',
-          ),
-        ],
-      ),
+    return AppScaffold(
+      title: const Text('Detalle y exportacion'),
+      actions: [
+        IconButton(
+          onPressed: _exportando ? null : _exportarCsv,
+          icon: _exportando
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.download_outlined),
+          tooltip: 'Exportar CSV',
+        ),
+      ],
       body: Column(
         children: [
           Padding(
@@ -106,10 +106,10 @@ class _DetallePageState extends ConsumerState<DetallePage> {
                     'hasta ${_rango.end.toLocal().toIso8601String().split('T').first}',
                   ),
                 ),
-                TextButton.icon(
+                PrimaryButton(
+                  label: 'Cambiar rango',
                   onPressed: _seleccionarRango,
                   icon: const Icon(Icons.date_range),
-                  label: const Text('Cambiar'),
                 ),
               ],
             ),
@@ -133,19 +133,21 @@ class _DetallePageState extends ConsumerState<DetallePage> {
                   separatorBuilder: (_, __) => const Divider(height: 0),
                   itemBuilder: (context, index) {
                     final reg = registros[index];
-                    return ListTile(
-                      leading: const Icon(Icons.timer_outlined),
-                      title: Text(reg.empleado),
-                      subtitle: Text(
-                        '${reg.fecha.toLocal()} • Supervisor: ${reg.supervisor ?? 'N/A'}',
-                      ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text('${reg.horas.toStringAsFixed(1)} h'),
-                          Text('Incidencias: ${reg.incidencias}'),
-                        ],
+                    return Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.timer_outlined),
+                        title: Text(reg.empleado),
+                        subtitle: Text(
+                          '${reg.fecha.toLocal()} • Supervisor: ${reg.supervisor ?? 'N/A'}',
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text('${reg.horas.toStringAsFixed(1)} h'),
+                            Text('Incidencias: ${reg.incidencias}'),
+                          ],
+                        ),
                       ),
                     );
                   },

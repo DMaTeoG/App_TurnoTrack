@@ -2,6 +2,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/widgets/app_scaffold.dart';
+import '../../../core/widgets/primary_button.dart';
 import '../data/supervisores_repo.dart';
 import '../domain/supervisor.dart';
 
@@ -88,13 +90,9 @@ class _SupervisorFormPageState extends ConsumerState<SupervisorFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.supervisorId == null
-              ? 'Nuevo supervisor'
-              : 'Editar supervisor',
-        ),
+    return AppScaffold(
+      title: Text(
+        widget.supervisorId == null ? 'Nuevo supervisor' : 'Editar supervisor',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -137,15 +135,10 @@ class _SupervisorFormPageState extends ConsumerState<SupervisorFormPage> {
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: PrimaryButton(
+                  label: 'Guardar',
+                  isLoading: _saving,
                   onPressed: _saving ? null : _guardar,
-                  child: _saving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Guardar'),
                 ),
               ),
             ],

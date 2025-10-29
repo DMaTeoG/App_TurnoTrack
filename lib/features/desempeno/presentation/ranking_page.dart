@@ -2,6 +2,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/app_scaffold.dart';
 import '../data/desempeno_repo.dart';
 
 final rankingProvider = FutureProvider.autoDispose((ref) {
@@ -16,17 +17,15 @@ class RankingPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final rankingAsync = ref.watch(rankingProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ranking semanal'),
-        actions: [
-          IconButton(
-            onPressed: () => context.go('/desempeno/mis-consejos'),
-            icon: const Icon(Icons.lightbulb_outline),
-            tooltip: 'Mis consejos',
-          ),
-        ],
-      ),
+    return AppScaffold(
+      title: const Text('Ranking semanal'),
+      actions: [
+        IconButton(
+          onPressed: () => context.go('/desempeno/mis-consejos'),
+          icon: const Icon(Icons.lightbulb_outline),
+          tooltip: 'Mis consejos',
+        ),
+      ],
       body: rankingAsync.when(
         data: (ranking) {
           if (ranking.isEmpty) {
@@ -37,20 +36,23 @@ class RankingPage extends ConsumerWidget {
             separatorBuilder: (_, __) => const Divider(height: 0),
             itemBuilder: (context, index) {
               final item = ranking[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  child: Text('${index + 1}'),
-                ),
-                title: Text(item.empleado),
-                subtitle: Text('Supervisor: ${item.supervisor ?? 'N/A'}'),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('Score: ${item.score.toStringAsFixed(1)}'),
-                    Text('Puntualidad: ${(item.puntualidad).toStringAsFixed(0)}%'),
-                    Text('Horas: ${item.horas.toStringAsFixed(1)}'),
-                  ],
+              return Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    child: Text('${index + 1}', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                  ),
+                  title: Text(item.empleado),
+                  subtitle: Text('Supervisor: ${item.supervisor ?? 'N/A'}'),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('Score: ${item.score.toStringAsFixed(1)}'),
+                      Text('Puntualidad: ${(item.puntualidad).toStringAsFixed(0)}%'),
+                      Text('Horas: ${item.horas.toStringAsFixed(1)}'),
+                    ],
+                  ),
                 ),
               );
             },
