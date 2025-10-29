@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers/supabase_client_provider.dart';
+import '../../../core/widgets/primary_button.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -59,66 +60,77 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Iniciar sesion')),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Ingresa tu email corporativo';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passwordController,
-                    decoration: const InputDecoration(labelText: 'Contrasena'),
-                    obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Ingresa tu contrasena';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  if (_error != null)
-                    Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red),
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            elevation: 4,
+            margin: const EdgeInsets.all(24),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Brand / logo area
+                    Hero(
+                      tag: 'app-logo',
+                      child: CircleAvatar(
+                        radius: 36,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        child: const Icon(Icons.timelapse, color: Colors.white, size: 36),
+                      ),
                     ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
+                    const SizedBox(height: 12),
+                    Text('TurnoTrack', style: Theme.of(context).textTheme.headlineSmall),
+                    const SizedBox(height: 8),
+                    const Text('Inicia sesion para continuar', textAlign: TextAlign.center),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Ingresa tu email corporativo';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _passwordController,
+                      decoration: const InputDecoration(labelText: 'Contrasena'),
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Ingresa tu contrasena';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    if (_error != null)
+                      Text(
+                        _error!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    const SizedBox(height: 12),
+                    PrimaryButton(
+                      label: 'Ingresar',
+                      isLoading: _isLoading,
                       onPressed: _isLoading ? null : _signIn,
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Ingresar'),
+                      icon: const Icon(Icons.login),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'TurnoTrack protege tus datos segun Ley 1581 de 2012.',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    Text(
+                      'TurnoTrack protege tus datos segun Ley 1581 de 2012.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

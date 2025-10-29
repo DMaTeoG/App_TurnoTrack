@@ -172,24 +172,36 @@ class _HomeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      child: InkWell(
-        onTap: onTap,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(action.icon, size: 32),
-              const SizedBox(height: 12),
-              Text(
-                action.label,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ],
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 3)),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          splashColor: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(action.icon, size: 36, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(height: 12),
+                Text(
+                  action.label,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
           ),
         ),
       ),

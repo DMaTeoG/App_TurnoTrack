@@ -25,7 +25,9 @@ class _EntradaPageState extends ConsumerState<EntradaPage> {
   String? _error;
 
   Future<void> _abrirCaptura() async {
-    final resultado = await context.push<Map<String, dynamic>>('/registro/captura');
+    final resultado = await context.push<Map<String, dynamic>>(
+      '/registro/captura',
+    );
     if (resultado == null) return;
 
     setState(() {
@@ -36,7 +38,9 @@ class _EntradaPageState extends ConsumerState<EntradaPage> {
 
   Future<void> _registrarEntrada() async {
     if (_foto == null || _posicion == null) {
-      setState(() => _error = 'Completa captura y ubicacion antes de continuar.');
+      setState(
+        () => _error = 'Completa captura y ubicacion antes de continuar.',
+      );
       return;
     }
 
@@ -70,10 +74,9 @@ class _EntradaPageState extends ConsumerState<EntradaPage> {
     });
 
     try {
-      await ref.read(registrosRepositoryProvider).registrar(
-            registro: registro,
-            foto: _foto!,
-          );
+      await ref
+          .read(registrosRepositoryProvider)
+          .registrar(registro: registro, foto: _foto!);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -112,7 +115,10 @@ class _EntradaPageState extends ConsumerState<EntradaPage> {
             ),
             const SizedBox(height: 16),
             if (_foto != null)
-              Text('Foto lista: ${_foto!.name}', style: Theme.of(context).textTheme.labelLarge),
+              Text(
+                'Foto lista: ${_foto!.name}',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
             if (precision != null)
               Text('Precision GPS: ${precision.toStringAsFixed(1)} m'),
             if (_error != null)
@@ -140,4 +146,3 @@ class _EntradaPageState extends ConsumerState<EntradaPage> {
     );
   }
 }
-

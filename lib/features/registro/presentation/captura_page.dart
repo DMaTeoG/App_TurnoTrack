@@ -65,7 +65,8 @@ class _CapturaPageState extends ConsumerState<CapturaPage> {
   @override
   Widget build(BuildContext context) {
     final precision = _posicion?.accuracy;
-    final precisionOk = precision != null &&
+    final precisionOk =
+        precision != null &&
         precision <= AppConstants.gpsAccuracyThresholdMeters;
 
     return AppScaffold(
@@ -137,15 +138,14 @@ class _CapturaPageState extends ConsumerState<CapturaPage> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(color: Colors.red),
-                ),
+                child: Text(_error!, style: const TextStyle(color: Colors.red)),
               ),
             const Spacer(),
             ElevatedButton(
               onPressed: (_foto != null && precisionOk)
-                  ? () => Navigator.of(context).pop({'foto': _foto, 'posicion': _posicion})
+                  ? () => Navigator.of(
+                      context,
+                    ).pop({'foto': _foto, 'posicion': _posicion})
                   : null,
               child: const Text('Usar captura'),
             ),
@@ -155,4 +155,3 @@ class _CapturaPageState extends ConsumerState<CapturaPage> {
     );
   }
 }
-
