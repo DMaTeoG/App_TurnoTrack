@@ -51,8 +51,10 @@ class MisConsejosPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Semana ${consejo.semana}',
-                          style: Theme.of(context).textTheme.labelLarge),
+                      Text(
+                        'Semana ${consejo.semana}',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
                       const SizedBox(height: 8),
                       Text(consejo.mensajeEs),
                       if (consejo.mensajeEn != null) ...[

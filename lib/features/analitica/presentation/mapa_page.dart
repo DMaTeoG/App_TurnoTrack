@@ -40,7 +40,9 @@ class MapaPage extends ConsumerWidget {
               return Card(
                 child: ListTile(
                   leading: const Icon(Icons.location_on_outlined),
-                  title: Text('Lat ${punto.latitud.toStringAsFixed(4)}, Lng ${punto.longitud.toStringAsFixed(4)}'),
+                  title: Text(
+                    'Lat ${punto.latitud.toStringAsFixed(4)}, Lng ${punto.longitud.toStringAsFixed(4)}',
+                  ),
                   subtitle: Text('Registros: ${punto.conteo}'),
                 ),
               );

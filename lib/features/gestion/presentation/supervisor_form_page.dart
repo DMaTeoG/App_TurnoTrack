@@ -9,13 +9,13 @@ import '../domain/supervisor.dart';
 
 final supervisorDetalleProvider = FutureProvider.autoDispose
     .family<SupervisorModel?, String>((ref, id) async {
-  try {
-    final lista = await ref.watch(supervisoresRepositoryProvider).listar();
-    return lista.firstWhere((item) => item.id == id);
-  } catch (_) {
-    return null;
-  }
-});
+      try {
+        final lista = await ref.watch(supervisoresRepositoryProvider).listar();
+        return lista.firstWhere((item) => item.id == id);
+      } catch (_) {
+        return null;
+      }
+    });
 
 class SupervisorFormPage extends ConsumerStatefulWidget {
   const SupervisorFormPage({super.key, this.supervisorId});
@@ -40,8 +40,9 @@ class _SupervisorFormPageState extends ConsumerState<SupervisorFormPage> {
     super.initState();
     if (widget.supervisorId != null) {
       Future.microtask(() async {
-        final supervisor = await ref
-            .read(supervisorDetalleProvider(widget.supervisorId!).future);
+        final supervisor = await ref.read(
+          supervisorDetalleProvider(widget.supervisorId!).future,
+        );
         if (!mounted || supervisor == null) return;
         setState(() {
           _documentoController.text = supervisor.documento;
@@ -124,7 +125,9 @@ class _SupervisorFormPageState extends ConsumerState<SupervisorFormPage> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _telefonoController,
-                decoration: const InputDecoration(labelText: 'Telefono (opcional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Telefono (opcional)',
+                ),
               ),
               const SizedBox(height: 12),
               SwitchListTile(

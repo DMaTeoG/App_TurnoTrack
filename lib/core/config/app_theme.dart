@@ -26,6 +26,21 @@ class AppTheme {
     );
 
     return base.copyWith(
+      // Add custom gradients and color scales in extensions through theme
+      extensions: <ThemeExtension<dynamic>>[
+        AppGradients(
+          primaryGradient: LinearGradient(
+            colors: [primary, primaryVariant],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          accentGradient: LinearGradient(
+            colors: [accent.withOpacity(0.9), accent.withOpacity(0.6)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+      ],
       colorScheme: base.colorScheme.copyWith(
         primary: primary,
         secondary: accent,
@@ -88,5 +103,31 @@ class AppTheme {
         },
       ),
     );
+  }
+}
+
+// Simple ThemeExtension to expose gradients via Theme.of(context).extension<_AppGradients>()
+class AppGradients extends ThemeExtension<AppGradients> {
+  const AppGradients({
+    required this.primaryGradient,
+    required this.accentGradient,
+  });
+
+  final Gradient primaryGradient;
+  final Gradient accentGradient;
+
+  @override
+  AppGradients copyWith({Gradient? primaryGradient, Gradient? accentGradient}) {
+    return AppGradients(
+      primaryGradient: primaryGradient ?? this.primaryGradient,
+      accentGradient: accentGradient ?? this.accentGradient,
+    );
+  }
+
+  @override
+  AppGradients lerp(ThemeExtension<AppGradients>? other, double t) {
+    if (other is! AppGradients) return this;
+    // Gradients are not trivially lerpable; return either end depending on t
+    return t < 0.5 ? this : other;
   }
 }

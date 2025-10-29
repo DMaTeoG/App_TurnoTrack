@@ -8,14 +8,15 @@ import '../domain/supervisor.dart';
 
 final supervisoresListProvider = FutureProvider.autoDispose
     .family<List<SupervisorModel>, String>((ref, filtro) async {
-  return ref.watch(supervisoresRepositoryProvider).listar(filtro: filtro);
-});
+      return ref.watch(supervisoresRepositoryProvider).listar(filtro: filtro);
+    });
 
 class SupervisoresListPage extends ConsumerStatefulWidget {
   const SupervisoresListPage({super.key});
 
   @override
-  ConsumerState<SupervisoresListPage> createState() => _SupervisoresListPageState();
+  ConsumerState<SupervisoresListPage> createState() =>
+      _SupervisoresListPageState();
 }
 
 class _SupervisoresListPageState extends ConsumerState<SupervisoresListPage> {
@@ -68,7 +69,11 @@ class _SupervisoresListPageState extends ConsumerState<SupervisoresListPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: const [
-                        Icon(Icons.supervisor_account_outlined, size: 64, color: Colors.grey),
+                        Icon(
+                          Icons.supervisor_account_outlined,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
                         SizedBox(height: 8),
                         Text('Sin supervisores registrados.'),
                       ],
@@ -85,10 +90,16 @@ class _SupervisoresListPageState extends ConsumerState<SupervisoresListPage> {
                         title: Text(supervisor.nombre),
                         subtitle: Text(supervisor.documento),
                         trailing: Icon(
-                          supervisor.activo ? Icons.check_circle : Icons.pause_circle,
-                          color: supervisor.activo ? Colors.green : Colors.orange,
+                          supervisor.activo
+                              ? Icons.check_circle
+                              : Icons.pause_circle,
+                          color: supervisor.activo
+                              ? Colors.green
+                              : Colors.orange,
                         ),
-                        onTap: () => context.go('/gestion/supervisores/${supervisor.id}'),
+                        onTap: () => context.go(
+                          '/gestion/supervisores/${supervisor.id}',
+                        ),
                       ),
                     );
                   },

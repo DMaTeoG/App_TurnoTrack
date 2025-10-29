@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/providers/connectivity_provider.dart';
+import '../../../core/widgets/gradient_background.dart';
+import '../../../core/widgets/section_card.dart';
 import '../data/analytics_repo.dart';
 
 final kpisProvider = FutureProvider.autoDispose((ref) {
@@ -58,108 +60,95 @@ class DashboardPage extends ConsumerWidget {
                 runSpacing: 12,
                 children: [
                   for (final kpi in kpis)
-                    SizedBox(width: 200, child: _KpiCard(
-                      title: kpi.titulo,
-                      value: kpi.valor.toStringAsFixed(1),
-                      delta: kpi.variacion?.toDouble(),
-                    )),
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width > 600
+                          ? 260
+                          : double.infinity,
+                      child: SectionCard(
+                        title: kpi.titulo,
+                        minHeight: 100,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              kpi.valor.toStringAsFixed(1),
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            ),
+                            if (kpi.variacion != null)
+                              Text(
+                                '${kpi.variacion!.toStringAsFixed(1)}%',
+                                style: TextStyle(
+                                  color: kpi.variacion! >= 0
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Text('No se pudieron cargar KPI: $error'),
             ),
             const SizedBox(height: 24),
-            Text(
-              'Horas efectivas (ultimos 30 dias)',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            seriesAsync.when(
-              data: (series) => SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: series.length,
-                  itemBuilder: (context, index) {
-                    final punto = series[index];
-                    return Container(
-                      width: 80,
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.blueGrey.shade100),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '${punto.valor.toStringAsFixed(1)} h',
-                            style: Theme.of(context).textTheme.titleMedium,
+            // Replaced the following malformed block with a clean series card below
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SectionCard(
+                title: 'Horas efectivas',
+                subtitle: 'Últimos 30 días',
+                minHeight: 140,
+                child: seriesAsync.when(
+                  data: (series) => SizedBox(
+                    height: 120,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: series.length,
+                      itemBuilder: (context, index) {
+                        final punto = series[index];
+                        return Container(
+                          width: 80,
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.blueGrey.shade50),
+                            borderRadius: BorderRadius.circular(8),
+                            color: Theme.of(context).cardColor,
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${punto.fecha.month}/${punto.fecha.day}',
-                            style: Theme.of(context).textTheme.labelSmall,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '${punto.valor.toStringAsFixed(1)} h',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${punto.fecha.month}/${punto.fecha.day}',
+                                style: Theme.of(context).textTheme.labelSmall,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    );
-                  },
+                        );
+                      },
+                    ),
+                  ),
+                  loading: () => const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                  error: (error, _) => Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text('No se pudieron cargar series: $error'),
+                  ),
                 ),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Text('No se pudieron cargar series: $error'),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _KpiCard extends StatelessWidget {
-  const _KpiCard({
-    required this.title,
-    required this.value,
-    this.delta,
-  });
-
-  final String title;
-  final String value;
-  final double? delta;
-
-  @override
-  Widget build(BuildContext context) {
-    final deltaText = delta == null
-        ? null
-        : '${delta! >= 0 ? '+' : ''}${delta!.toStringAsFixed(1)}%';
-    final deltaColor = delta == null
-        ? null
-        : delta! >= 0
-            ? Colors.green
-            : Colors.red;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.labelMedium),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            if (deltaText != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                deltaText,
-                style: TextStyle(color: deltaColor),
-              ),
-            ],
+            const SizedBox(height: 24),
           ],
         ),
       ),

@@ -7,11 +7,10 @@ import '../data/analytics_repo.dart';
 
 final detalleRegistrosProvider = FutureProvider.autoDispose
     .family<List<DetalleRegistro>, DateTimeRange>((ref, rango) {
-  return ref.watch(analyticsRepositoryProvider).detalleRegistros(
-        desde: rango.start,
-        hasta: rango.end,
-      );
-});
+      return ref
+          .watch(analyticsRepositoryProvider)
+          .detalleRegistros(desde: rango.start, hasta: rango.end);
+    });
 
 class DetallePage extends ConsumerStatefulWidget {
   const DetallePage({super.key});
@@ -45,10 +44,21 @@ class _DetallePageState extends ConsumerState<DetallePage> {
     if (nuevoRango != null) {
       setState(() {
         _rango = DateTimeRange(
-          start: DateTime(nuevoRango.start.year, nuevoRango.start.month,
-              nuevoRango.start.day, 0, 0),
-          end: DateTime(nuevoRango.end.year, nuevoRango.end.month,
-              nuevoRango.end.day, 23, 59, 59),
+          start: DateTime(
+            nuevoRango.start.year,
+            nuevoRango.start.month,
+            nuevoRango.start.day,
+            0,
+            0,
+          ),
+          end: DateTime(
+            nuevoRango.end.year,
+            nuevoRango.end.month,
+            nuevoRango.end.day,
+            23,
+            59,
+            59,
+          ),
         );
       });
     }
@@ -60,10 +70,9 @@ class _DetallePageState extends ConsumerState<DetallePage> {
       _mensaje = null;
     });
 
-    final url = await ref.read(analyticsRepositoryProvider).exportCsv(
-          desde: _rango.start,
-          hasta: _rango.end,
-        );
+    final url = await ref
+        .read(analyticsRepositoryProvider)
+        .exportCsv(desde: _rango.start, hasta: _rango.end);
 
     if (!mounted) return;
 
@@ -126,7 +135,9 @@ class _DetallePageState extends ConsumerState<DetallePage> {
             child: registrosAsync.when(
               data: (registros) {
                 if (registros.isEmpty) {
-                  return const Center(child: Text('Sin registros en el periodo.'));
+                  return const Center(
+                    child: Text('Sin registros en el periodo.'),
+                  );
                 }
                 return ListView.separated(
                   itemCount: registros.length,

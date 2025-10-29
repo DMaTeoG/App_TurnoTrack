@@ -29,7 +29,9 @@ class RankingPage extends ConsumerWidget {
       body: rankingAsync.when(
         data: (ranking) {
           if (ranking.isEmpty) {
-            return const Center(child: Text('Sin datos para la semana actual.'));
+            return const Center(
+              child: Text('Sin datos para la semana actual.'),
+            );
           }
           return ListView.separated(
             itemCount: ranking.length,
@@ -39,8 +41,15 @@ class RankingPage extends ConsumerWidget {
               return Card(
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                    child: Text('${index + 1}', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.1),
+                    child: Text(
+                      '${index + 1}',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
                   ),
                   title: Text(item.empleado),
                   subtitle: Text('Supervisor: ${item.supervisor ?? 'N/A'}'),
@@ -49,7 +58,9 @@ class RankingPage extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text('Score: ${item.score.toStringAsFixed(1)}'),
-                      Text('Puntualidad: ${(item.puntualidad).toStringAsFixed(0)}%'),
+                      Text(
+                        'Puntualidad: ${(item.puntualidad).toStringAsFixed(0)}%',
+                      ),
                       Text('Horas: ${item.horas.toStringAsFixed(1)}'),
                     ],
                   ),
