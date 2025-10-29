@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/providers/supabase_client_provider.dart';
 import '../../../core/providers/user_role_provider.dart';
 import '../../../core/widgets/app_scaffold.dart';
+import '../../../core/widgets/gradient_background.dart';
+import '../../../core/widgets/section_card.dart';
+import '../../../core/widgets/primary_button.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -35,29 +38,66 @@ class HomePage extends ConsumerWidget {
           tooltip: 'Cerrar sesion',
         ),
       ],
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hola $displayName',
-              style: Theme.of(context).textTheme.headlineSmall,
+      body: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          // Hero gradient banner
+          GradientBackground(
+            height: 180,
+            child: Row(
+              children: [
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Hola, $displayName',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(color: Colors.white),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Listo para registrar o revisar datos?',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          PrimaryButton(
+                            label: 'Registrar entrada',
+                            onPressed: () => context.go('/registro/entrada'),
+                          ),
+                          const SizedBox(width: 8),
+                          PrimaryButton(
+                            label: 'Registrar salida',
+                            onPressed: () => context.go('/registro/salida'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+              ],
             ),
-            const SizedBox(height: 8),
-            Chip(
-              label: Text('Rol: ${role.name}'),
-              avatar: const Icon(Icons.verified_user, size: 16),
-              backgroundColor: Theme.of(
-                context,
-              ).colorScheme.surfaceContainerHighest,
-            ),
-            const SizedBox(height: 16),
-            Expanded(
+          ),
+          const SizedBox(height: 16),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SectionCard(
+              title: 'Accesos rápidos',
               child: GridView.count(
-                crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: MediaQuery.of(context).size.width > 600 ? 4 : 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
+                childAspectRatio: 1.05,
                 children: [
                   for (final action in actions)
                     _HomeCard(
@@ -67,8 +107,33 @@ class HomePage extends ConsumerWidget {
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+
+          const SizedBox(height: 16),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SectionCard(
+              title: 'Actividad reciente',
+              subtitle: 'Últimas acciones',
+              minHeight: 120,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  ListTile(
+                    leading: Icon(Icons.history),
+                    title: Text('No hay actividad reciente'),
+                    subtitle: Text(
+                      'Realiza registros o revisa analítica para ver actividad aquí.',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+        ],
       ),
     );
   }

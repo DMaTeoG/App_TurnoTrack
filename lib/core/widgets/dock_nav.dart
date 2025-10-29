@@ -19,7 +19,11 @@ class DockNav extends StatelessWidget {
       label: 'Analítica',
       route: '/analitica',
     ),
-    _DockItem(icon: Icons.person_outline, label: 'Perfil', route: '/perfil'),
+    _DockItem(
+      icon: Icons.emoji_events_outlined,
+      label: 'Desempeño',
+      route: '/desempeno',
+    ),
   ];
 
   @override
