@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/supabase_client_provider.dart';
 import '../../../core/providers/user_role_provider.dart';
+import '../../../core/widgets/app_scaffold.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -19,22 +20,21 @@ class HomePage extends ConsumerWidget {
     final role = ref.watch(userRoleProvider);
     final actions = _actionsForRole(role);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('TurnoTrack'),
-        actions: [
-          IconButton(
-            onPressed: () async {
-              await ref.read(supabaseClientProvider).auth.signOut();
-              if (context.mounted) {
-                context.go('/login');
-              }
-            },
-            icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar sesion',
-          ),
-        ],
-      ),
+    return AppScaffold(
+      showDock: true,
+      title: const Text('TurnoTrack'),
+      actions: [
+        IconButton(
+          onPressed: () async {
+            await ref.read(supabaseClientProvider).auth.signOut();
+            if (context.mounted) {
+              context.go('/login');
+            }
+          },
+          icon: const Icon(Icons.logout),
+          tooltip: 'Cerrar sesion',
+        ),
+      ],
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
