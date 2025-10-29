@@ -66,6 +66,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) =>
             _page(child: const HomePage(), state: state),
       ),
+      // Top-level registro route (home for registro) to allow '/registro' navigation
+      GoRoute(
+        path: '/registro',
+        name: 'registro',
+        pageBuilder: (context, state) =>
+            _page(child: const EntradaPage(), state: state),
+      ),
       GoRoute(
         path: '/registro/captura',
         name: 'registro-captura',
