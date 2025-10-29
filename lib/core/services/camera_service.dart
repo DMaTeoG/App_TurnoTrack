@@ -34,13 +34,14 @@ class CameraService {
         camera,
         preset,
         enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.yuv420,
+        imageFormatGroup: ImageFormatGroup.jpeg,
       );
 
       await controller.initialize();
 
       try {
         final file = await controller.takePicture();
+        debugPrint('Camera photo stored at ${file.path}');
         return file;
       } finally {
         await controller.dispose();

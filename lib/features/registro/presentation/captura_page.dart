@@ -1,4 +1,6 @@
-﻿import 'package:camera/camera.dart';
+import 'dart:io';
+
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -6,7 +8,6 @@ import 'package:geolocator/geolocator.dart';
 import '../../../core/config/constants.dart';
 import '../../../core/services/camera_service.dart';
 import '../../../core/services/geolocation_service.dart';
-import '../../../core/widgets/app_scaffold.dart';
 
 class CapturaPage extends ConsumerStatefulWidget {
   const CapturaPage({super.key});
@@ -37,7 +38,7 @@ class _CapturaPageState extends ConsumerState<CapturaPage> {
       _posicion = position;
       _loadingGps = false;
       if (position == null) {
-        _error = 'No fue posible obtener ubicacion. Revisa permisos.';
+        _error = 'Activa la ubicacion y concede permisos para continuar.';
       }
     });
   }
@@ -57,7 +58,7 @@ class _CapturaPageState extends ConsumerState<CapturaPage> {
       _foto = foto;
       _loadingFoto = false;
       if (foto == null) {
-        _error = 'No fue posible capturar foto.';
+        _error = 'No fue posible capturar la foto. Revisa permisos o reintenta.';
       }
     });
   }
@@ -65,12 +66,11 @@ class _CapturaPageState extends ConsumerState<CapturaPage> {
   @override
   Widget build(BuildContext context) {
     final precision = _posicion?.accuracy;
-    final precisionOk =
-        precision != null &&
+    final precisionOk = precision != null &&
         precision <= AppConstants.gpsAccuracyThresholdMeters;
 
-    return AppScaffold(
-      title: const Text('Captura de evidencia'),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Captura de evidencia')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -81,13 +81,25 @@ class _CapturaPageState extends ConsumerState<CapturaPage> {
               style: Theme.of(context).textTheme.labelLarge,
             ),
             const SizedBox(height: 16),
-            Card(
-              child: SizedBox(
-                height: 200,
-                child: Center(
+            AspectRatio(
+              aspectRatio: 3 / 4,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceVariant,
+                  ),
                   child: _foto != null
-                      ? Text('Foto capturada: ${_foto!.name}')
-                      : const Text('Sin foto'),
+                      ? Image.file(
+                          File(_foto!.path),
+                          fit: BoxFit.cover,
+                        )
+                      : const Center(
+                          child: Icon(
+                            Icons.photo_camera_front,
+                            size: 64,
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -138,14 +150,16 @@ class _CapturaPageState extends ConsumerState<CapturaPage> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: Colors.red),
+                ),
               ),
             const Spacer(),
             ElevatedButton(
               onPressed: (_foto != null && precisionOk)
-                  ? () => Navigator.of(
-                      context,
-                    ).pop({'foto': _foto, 'posicion': _posicion})
+                  ? () => Navigator.of(context)
+                      .pop({'foto': _foto, 'posicion': _posicion})
                   : null,
               child: const Text('Usar captura'),
             ),
