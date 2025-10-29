@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Necesitamos acceso a la camara para capturar evidencia de asistencia.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Usamos tu ubicacion para validar que marcas desde el sitio autorizado.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>La app requiere tu ubicacion al momento de marcar para confirmar la precision.</string>
 </dict>
 </plist>
