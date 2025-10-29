@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/config/constants.dart';
 import '../../../core/providers/supabase_client_provider.dart';
+import '../../../core/widgets/app_scaffold.dart';
 import '../data/registros_repo.dart';
 import '../domain/entities.dart';
 
@@ -92,8 +93,8 @@ class _EntradaPageState extends ConsumerState<EntradaPage> {
   Widget build(BuildContext context) {
     final precision = _posicion?.accuracy;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Registrar entrada')),
+    return AppScaffold(
+      title: const Text('Registrar entrada'),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

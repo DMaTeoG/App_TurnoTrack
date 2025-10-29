@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import '../../../core/config/constants.dart';
 import '../../../core/services/camera_service.dart';
 import '../../../core/services/geolocation_service.dart';
+import '../../../core/widgets/app_scaffold.dart';
 
 class CapturaPage extends ConsumerStatefulWidget {
   const CapturaPage({super.key});
@@ -67,8 +68,8 @@ class _CapturaPageState extends ConsumerState<CapturaPage> {
     final precisionOk = precision != null &&
         precision <= AppConstants.gpsAccuracyThresholdMeters;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Captura de evidencia')),
+    return AppScaffold(
+      title: const Text('Captura de evidencia'),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
