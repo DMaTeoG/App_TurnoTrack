@@ -1,61 +1,71 @@
+import 'dart:io';
 import 'package:camera/camera.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:image/image.dart' as img;
+import '../constants/app_constants.dart';
 
 class CameraService {
-  Future<XFile?> captureSelfie({
-    ResolutionPreset preset = ResolutionPreset.medium,
-  }) async {
-    try {
-      final status = await Permission.camera.status;
-      if (status.isPermanentlyDenied) {
-        await openAppSettings();
-        return null;
-      }
-      if (status.isDenied || status.isRestricted) {
-        final requestResult = await Permission.camera.request();
-        if (!requestResult.isGranted) {
-          return null;
-        }
-      }
+  CameraController? _controller;
+  List<CameraDescription>? _cameras;
 
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
-        return null;
-      }
-
-      final camera = cameras.firstWhere(
-        (cam) => cam.lensDirection == CameraLensDirection.front,
-        orElse: () => cameras.first,
-      );
-
-      final controller = CameraController(
-        camera,
-        preset,
-        enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.jpeg,
-      );
-
-      await controller.initialize();
-
-      try {
-        final file = await controller.takePicture();
-        debugPrint('Camera photo stored at ${file.path}');
-        return file;
-      } finally {
-        await controller.dispose();
-      }
-    } on CameraException catch (error) {
-      debugPrint('Camera error: ${error.code} - ${error.description}');
-      return null;
-    } catch (error) {
-      debugPrint('Unexpected camera error: $error');
-      return null;
+  Future<void> initialize() async {
+    _cameras = await availableCameras();
+    if (_cameras!.isEmpty) {
+      throw Exception('No se encontraron cámaras');
     }
+
+    _controller = CameraController(
+      _cameras!.first,
+      ResolutionPreset.high,
+      enableAudio: false,
+    );
+
+    await _controller!.initialize();
+  }
+
+  CameraController? get controller => _controller;
+
+  Future<File> takePicture() async {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      throw Exception('Cámara no inicializada');
+    }
+
+    final XFile picture = await _controller!.takePicture();
+    final File imageFile = File(picture.path);
+
+    // Comprimir y optimizar la imagen
+    return await compressImage(imageFile);
+  }
+
+  Future<File> compressImage(File file) async {
+    final bytes = await file.readAsBytes();
+    img.Image? image = img.decodeImage(bytes);
+
+    if (image == null) return file;
+
+    // Redimensionar si es muy grande
+    if (image.width > 1920) {
+      image = img.copyResize(image, width: 1920);
+    }
+
+    // Comprimir
+    final compressedBytes = img.encodeJpg(
+      image,
+      quality: AppConstants.photoQuality,
+    );
+
+    // Verificar tamaño
+    if (compressedBytes.length > AppConstants.maxPhotoSizeKB * 1024) {
+      // Si aún es muy grande, reducir más la calidad
+      final moreCompressed = img.encodeJpg(image, quality: 70);
+      await file.writeAsBytes(moreCompressed);
+    } else {
+      await file.writeAsBytes(compressedBytes);
+    }
+
+    return file;
+  }
+
+  void dispose() {
+    _controller?.dispose();
   }
 }
-
-final cameraServiceProvider = Provider<CameraService>((ref) {
-  return CameraService();
-});

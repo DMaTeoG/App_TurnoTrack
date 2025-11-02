@@ -1,56 +1,82 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'core/constants/app_constants.dart';
+import 'core/theme/app_theme.dart';
+import 'core/services/notification_service.dart';
+import 'presentation/pages/splash/splash_screen.dart';
+import 'presentation/screens/login_screen.dart';
+import 'presentation/screens/home_screen.dart';
+import 'presentation/screens/check_in_screen.dart';
+import 'presentation/screens/settings_screen.dart';
+import 'presentation/screens/reports_screen.dart';
+import 'presentation/providers/theme_provider.dart';
 
-import 'app_router.dart';
-import 'core/config/app_theme.dart';
-import 'core/config/constants.dart';
-
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (error) {
-    debugPrint('Dotenv load skipped: $error');
-  }
+  // Configurar orientación
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
-  if (AppConstants.supabaseUrl.isEmpty || AppConstants.supabaseAnonKey.isEmpty) {
-    throw Exception(
-      'Missing SUPABASE_URL or SUPABASE_ANON_KEY. Configure them in .env or with --dart-define.',
-    );
-  }
-
+  // Inicializar Supabase
   await Supabase.initialize(
     url: AppConstants.supabaseUrl,
     anonKey: AppConstants.supabaseAnonKey,
   );
 
-  runApp(const ProviderScope(child: TurnoTrackApp()));
+  // Inicializar SharedPreferences (reemplaza LocalStorage/Hive)
+  final prefs = await SharedPreferences.getInstance();
+
+  // Inicializar servicio de notificaciones
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+
+  runApp(
+    ProviderScope(
+      child: MyApp(prefs: prefs, notificationService: notificationService),
+    ),
+  );
 }
 
-class TurnoTrackApp extends ConsumerWidget {
-  const TurnoTrackApp({super.key});
+class MyApp extends ConsumerWidget {
+  final SharedPreferences prefs;
+  final NotificationService notificationService;
+
+  const MyApp({
+    super.key,
+    required this.prefs,
+    required this.notificationService,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final router = ref.watch(appRouterProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
-    return MaterialApp.router(
-      title: 'TurnoTrack',
-      theme: AppTheme.buildTheme(),
-      routerConfig: router,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('es'),
-        Locale('en'),
-      ],
+    return MaterialApp(
+      title: AppStrings.appName,
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
+      home: SplashScreen(
+        onAnimationComplete: () {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        },
+      ),
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/home': (context) => const HomeScreen(),
+        '/check-in': (context) => const CheckInScreen(),
+        '/settings': (context) => const SettingsScreen(),
+        '/reports': (context) => const ReportsScreen(),
+      },
     );
   }
 }
