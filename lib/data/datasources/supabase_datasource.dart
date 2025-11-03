@@ -205,4 +205,22 @@ class SupabaseDatasource {
 
     return (response as List).map((json) => SalesData.fromJson(json)).toList();
   }
+
+  Future<void> createSale({
+    required String userId,
+    required DateTime date,
+    required double amount,
+    required int quantity,
+    required String productCategory,
+    Map<String, dynamic>? metadata,
+  }) async {
+    await _client.from('sales').insert({
+      'user_id': userId,
+      'date': date.toIso8601String(),
+      'amount': amount,
+      'quantity': quantity,
+      'product_category': productCategory,
+      'metadata': metadata,
+    });
+  }
 }

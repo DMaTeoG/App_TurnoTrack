@@ -63,8 +63,7 @@ CREATE TABLE IF NOT EXISTS attendance (
     is_late BOOLEAN DEFAULT false,
     minutes_late INTEGER DEFAULT 0,
     synced BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    CONSTRAINT no_duplicate_checkin UNIQUE(user_id, DATE(check_in_time))
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- SALES TABLE
@@ -126,19 +125,19 @@ CREATE TABLE IF NOT EXISTS audit_log (
 -- =============================================
 
 -- Users indices
-CREATE INDEX IF NOT EXISTS idx_users_supervisor ON users(supervisor_id) WHERE supervisor_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_users_supervisor ON users(supervisor_id);
+CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
 -- Locations indices
-CREATE INDEX IF NOT EXISTS idx_locations_active ON locations(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_locations_active ON locations(is_active);
 
 -- Attendance indices
 CREATE INDEX IF NOT EXISTS idx_attendance_user ON attendance(user_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_check_in ON attendance(check_in_time DESC);
-CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(DATE(check_in_time));
-CREATE INDEX IF NOT EXISTS idx_attendance_user_date ON attendance(user_id, DATE(check_in_time));
+CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(check_in_time);
+CREATE INDEX IF NOT EXISTS idx_attendance_user_date ON attendance(user_id, check_in_time);
 
 -- Sales indices
 CREATE INDEX IF NOT EXISTS idx_sales_user ON sales(user_id);
@@ -148,7 +147,7 @@ CREATE INDEX IF NOT EXISTS idx_sales_user_date ON sales(user_id, date);
 -- Performance metrics indices
 CREATE INDEX IF NOT EXISTS idx_performance_user ON performance_metrics(user_id);
 CREATE INDEX IF NOT EXISTS idx_performance_period ON performance_metrics(period_start, period_end);
-CREATE INDEX IF NOT EXISTS idx_performance_ranking ON performance_metrics(ranking) WHERE ranking IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_performance_ranking ON performance_metrics(ranking);
 
 -- Rate limit indices
 CREATE INDEX IF NOT EXISTS idx_rate_limit_user_action ON rate_limit_log(user_id, action_type, created_at DESC);
@@ -366,7 +365,7 @@ USING (auth.uid() IN (SELECT id FROM users WHERE role = 'manager'));
 CREATE POLICY "managers_create_users"
 ON users FOR INSERT
 WITH CHECK (
-  auth.uid() IN (SELECT id FROM users WHERE role = 'manager'))
+  auth.uid() IN (SELECT id FROM users WHERE role = 'manager')
   AND role IN ('worker', 'supervisor')
 );
 
@@ -403,7 +402,7 @@ WITH CHECK (
   AND NOT EXISTS (
     SELECT 1 FROM attendance 
     WHERE user_id = auth.uid() 
-    AND DATE(check_in_time) = CURRENT_DATE
+    AND (check_in_time::DATE) = CURRENT_DATE
     AND check_out_time IS NULL
   )
 );
@@ -543,7 +542,7 @@ CREATE POLICY "Users can upload their attendance photos"
     TO authenticated
     WITH CHECK (
       bucket_id = 'attendance-photos' 
-      AND auth.uid()::text = (storage.foldername(name))[1]
+      AND auth.uid()::text = split_part(name, '/', 1)
     );
 
 DROP POLICY IF EXISTS "Users can view attendance photos" ON storage.objects;
@@ -559,7 +558,7 @@ CREATE POLICY "Users can upload their profile photos"
     TO authenticated
     WITH CHECK (
       bucket_id = 'profile-photos'
-      AND auth.uid()::text = (storage.foldername(name))[1]
+      AND auth.uid()::text = split_part(name, '/', 1)
     );
 
 DROP POLICY IF EXISTS "Users can view profile photos" ON storage.objects;

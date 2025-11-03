@@ -7,6 +7,7 @@ import '../providers/attendance_provider.dart';
 import '../../core/widgets/animated_widgets.dart';
 import '../pages/ranking/ranking_page.dart';
 import '../pages/dashboards/worker_dashboard_page.dart';
+import '../pages/sales/sales_page.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -252,12 +253,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildStatCard(
-                theme,
-                'Ventas',
-                '\$15.2K',
-                Icons.trending_up,
-                Colors.purple,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(
+                    context,
+                  ).push(SmoothPageRoute(page: const SalesPage()));
+                },
+                child: _buildStatCard(
+                  theme,
+                  'Ventas',
+                  '\$15.2K',
+                  Icons.trending_up,
+                  Colors.purple,
+                ),
               ),
             ),
           ],
@@ -432,9 +440,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(theme, 0, Icons.home, 'Inicio'),
-              _buildNavItem(theme, 1, Icons.emoji_events, 'Ranking'),
-              _buildNavItem(theme, 2, Icons.bar_chart, 'Estadísticas'),
-              _buildNavItem(theme, 3, Icons.person, 'Perfil'),
+              _buildNavItem(theme, 1, Icons.shopping_bag, 'Ventas'),
+              _buildNavItem(theme, 2, Icons.emoji_events, 'Ranking'),
+              _buildNavItem(theme, 3, Icons.bar_chart, 'Stats'),
+              _buildNavItem(theme, 4, Icons.person, 'Perfil'),
             ],
           ),
         ),
@@ -453,23 +462,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return GestureDetector(
       onTap: () {
         setState(() => _selectedIndex = index);
+        final user = ref.read(authNotifierProvider).value;
+
+        // Navigate to sales page
+        if (index == 1 && user != null) {
+          Navigator.of(context).push(SmoothPageRoute(page: const SalesPage()));
+        }
         // Navigate to ranking page
-        if (index == 1) {
-          final user = ref.read(authNotifierProvider).value;
-          if (user != null) {
-            Navigator.of(
-              context,
-            ).push(SmoothPageRoute(page: RankingPage(currentUser: user)));
-          }
+        if (index == 2 && user != null) {
+          Navigator.of(
+            context,
+          ).push(SmoothPageRoute(page: RankingPage(currentUser: user)));
         }
         // Navigate to stats (worker dashboard)
-        if (index == 2) {
-          final user = ref.read(authNotifierProvider).value;
-          if (user != null) {
-            Navigator.of(
-              context,
-            ).push(SmoothPageRoute(page: WorkerDashboardPage(user: user)));
-          }
+        if (index == 3 && user != null) {
+          Navigator.of(
+            context,
+          ).push(SmoothPageRoute(page: WorkerDashboardPage(user: user)));
         }
       },
       child: AnimatedContainer(

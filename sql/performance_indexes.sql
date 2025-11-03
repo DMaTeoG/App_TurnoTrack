@@ -25,8 +25,7 @@ ON users USING gin (email gin_trgm_ops);
 
 -- Filtro por supervisor_id (getWorkersBySupervisor)
 CREATE INDEX IF NOT EXISTS idx_users_supervisor_id 
-ON users (supervisor_id) 
-WHERE supervisor_id IS NOT NULL;
+ON users (supervisor_id);
 
 -- Filtro por rol y estado activo (getSupervisors, getAllUsers)
 CREATE INDEX IF NOT EXISTS idx_users_role_active 
@@ -50,13 +49,11 @@ ON attendance (check_in_time DESC);
 
 -- Filtro por estado (is_late)
 CREATE INDEX IF NOT EXISTS idx_attendance_is_late 
-ON attendance (is_late) 
-WHERE is_late = true;
+ON attendance (is_late);
 
 -- Consultas por rango de fechas
 CREATE INDEX IF NOT EXISTS idx_attendance_date_range 
-ON attendance (check_in_time) 
-WHERE check_in_time IS NOT NULL;
+ON attendance (check_in_time);
 
 -- ============================================
 -- 4. ÍNDICES EN TABLA PERFORMANCE_METRICS
@@ -66,9 +63,9 @@ WHERE check_in_time IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_performance_user_period 
 ON performance_metrics (user_id, period_start DESC);
 
--- Ordenamiento por score
+-- Ordenamiento por attendance_score
 CREATE INDEX IF NOT EXISTS idx_performance_score 
-ON performance_metrics (score DESC);
+ON performance_metrics (attendance_score DESC);
 
 -- Filtro por período
 CREATE INDEX IF NOT EXISTS idx_performance_period 
@@ -84,8 +81,7 @@ ON locations (name);
 
 -- Estado activo
 CREATE INDEX IF NOT EXISTS idx_locations_active 
-ON locations (is_active) 
-WHERE is_active = true;
+ON locations (is_active);
 
 -- ============================================
 -- 6. ÍNDICES EN TABLA SALES
@@ -93,11 +89,11 @@ WHERE is_active = true;
 
 -- Consultas de ventas por usuario y fecha
 CREATE INDEX IF NOT EXISTS idx_sales_user_date 
-ON sales (user_id, sale_date DESC);
+ON sales (user_id, date DESC);
 
 -- Ordenamiento por fecha
 CREATE INDEX IF NOT EXISTS idx_sales_date 
-ON sales (sale_date DESC);
+ON sales (date DESC);
 
 -- ============================================
 -- 7. OPTIMIZAR ESTADÍSTICAS DE TABLAS
