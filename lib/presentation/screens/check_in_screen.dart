@@ -261,7 +261,7 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -299,12 +299,29 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
 
           // Show map if location is verified
           if (_locationVerified && _latitude != null && _longitude != null)
-            LocationMapWidget(
-              currentLatitude: _latitude!,
-              currentLongitude: _longitude!,
-              allowedLocations: const [], // TODO: Get from provider
-              height: 200,
-            ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2, end: 0),
+            Consumer(
+              builder: (context, ref, child) {
+                final locationsAsync = ref.watch(allowedLocationsProvider);
+                return locationsAsync.when(
+                  data: (locations) => LocationMapWidget(
+                    currentLatitude: _latitude!,
+                    currentLongitude: _longitude!,
+                    allowedLocations: locations,
+                    height: 200,
+                  ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2, end: 0),
+                  loading: () => const SizedBox(
+                    height: 200,
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (_, __) => LocationMapWidget(
+                    currentLatitude: _latitude!,
+                    currentLongitude: _longitude!,
+                    allowedLocations: const [],
+                    height: 200,
+                  ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2, end: 0),
+                );
+              },
+            ),
 
           const SizedBox(height: 24),
 
@@ -333,7 +350,7 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -363,7 +380,7 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
                     color: theme.colorScheme.primary,
                     boxShadow: [
                       BoxShadow(
-                        color: theme.colorScheme.primary.withOpacity(0.5),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.5),
                         blurRadius: 20,
                         spreadRadius: 5,
                       ),
@@ -392,7 +409,7 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(

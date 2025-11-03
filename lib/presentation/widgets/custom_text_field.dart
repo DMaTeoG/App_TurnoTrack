@@ -100,7 +100,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
                   )
                 : widget.suffixIcon,
             filled: true,
-            fillColor: colors.surfaceVariant.withOpacity(0.3),
+            // Migrate deprecated surfaceVariant -> surfaceContainerHighest and update alpha
+            fillColor: colors.surfaceContainerHighest.withValues(alpha: 0.3),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,

@@ -450,7 +450,7 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
           ),
         ),
         value: _isActive,
-        activeColor: AppTheme.primaryBlue,
+        activeThumbColor: AppTheme.primaryBlue,
         onChanged: (value) {
           setState(() => _isActive = value);
         },

@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../data/models/user_model.dart';
 import '../../providers/analytics_provider.dart';
 import '../../providers/ai_coaching_provider.dart';
+import '../../providers/attendance_provider.dart';
 
 /// Dashboard for Manager role - Organization-wide KPIs and insights
 class ManagerDashboardPage extends ConsumerStatefulWidget {
@@ -94,7 +95,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                   const SizedBox(height: 16),
 
                   // Department Comparison
-                  _buildDepartmentComparison(),
+                  _buildTopSupervisorsList(),
                   const SizedBox(height: 16),
 
                   // Critical Alerts
@@ -267,8 +268,8 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: (trendUp ? Colors.green : Colors.red).withOpacity(
-                      0.1,
+                    color: (trendUp ? Colors.green : Colors.red).withValues(
+                      alpha: 0.1,
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -339,7 +340,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: Colors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
@@ -427,7 +428,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                       dotData: const FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.blue.withValues(alpha: 0.1),
                       ),
                     ),
                     // Puntualidad
@@ -446,7 +447,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                       dotData: const FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: Colors.green.withOpacity(0.1),
+                        color: Colors.green.withValues(alpha: 0.1),
                       ),
                     ),
                   ],
@@ -623,7 +624,8 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                 ),
                 TextButton(
                   onPressed: () {
-                    // TODO: View all supervisors
+                    // Navegar a Users page con filtro de supervisores
+                    Navigator.pushNamed(context, '/users');
                   },
                   child: const Text('Ver todos'),
                 ),
@@ -650,7 +652,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
+                      color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -663,14 +665,14 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                   ),
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDepartmentComparison() {
+  Widget _buildTopSupervisorsList() {
     return Card(
       elevation: 2,
       child: Padding(
@@ -776,7 +778,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                   : Colors.orange;
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
-                color: color.withOpacity(0.05),
+                color: color.withValues(alpha: 0.05),
                 child: ListTile(
                   leading: Icon(Icons.warning, color: color),
                   title: Text(alert['title'].toString()),
@@ -784,12 +786,39 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                   trailing: IconButton(
                     icon: const Icon(Icons.arrow_forward),
                     onPressed: () {
-                      // TODO: View alert details
+                      // Mostrar diálogo con detalles de la alerta
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text(alert['title'].toString()),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(alert['description'].toString()),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Tipo: ${alert['severity']}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: color,
+                                ),
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cerrar'),
+                            ),
+                          ],
+                        ),
+                      );
                     },
                   ),
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),
@@ -821,8 +850,10 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     );
 
     try {
-      // Get recent attendance data (mocked for now - TODO: create provider)
-      final recentAttendance = <AttendanceModel>[]; // Empty list for now
+      // Get recent attendance data from provider
+      final recentAttendance = await ref.read(
+        recentOrganizationAttendanceProvider.future,
+      );
 
       final predictions = await ref
           .read(aiCoachingProvider.notifier)

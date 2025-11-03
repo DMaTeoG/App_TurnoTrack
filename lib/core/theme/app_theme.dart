@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Modern Material 3 theme with blue color scheme
@@ -64,8 +63,7 @@ class AppTheme {
       primary: primaryBlue,
       secondary: secondaryBlue,
       tertiary: accentBlue,
-      surface: surfaceLight,
-      background: backgroundLight,
+      surface: backgroundLight,
       error: error,
       brightness: Brightness.light,
     ),
@@ -124,7 +122,6 @@ class AppTheme {
       secondary: secondaryBlue,
       tertiary: primaryBlue,
       surface: surfaceDark,
-      background: backgroundDark,
       error: error,
       brightness: Brightness.dark,
     ),
@@ -165,7 +162,7 @@ class AppTheme {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(radiusMedium),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),

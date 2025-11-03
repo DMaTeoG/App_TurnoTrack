@@ -351,7 +351,53 @@ class _SaleCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
           onTap: () {
-            // TODO: Implementar detalle de venta
+            // Mostrar detalle de venta
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Row(
+                  children: [
+                    Icon(
+                      _getCategoryIcon(sale.productCategory),
+                      color: AppTheme.warning,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Detalle de Venta'),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDetailRow(
+                      'Categoría',
+                      sale.productCategory ?? 'Sin categoría',
+                    ),
+                    _buildDetailRow('Fecha', dateFormat.format(sale.date)),
+                    _buildDetailRow('Cantidad', '${sale.quantity} unidades'),
+                    _buildDetailRow(
+                      'Monto',
+                      currencyFormat.format(sale.amount),
+                    ),
+                    _buildDetailRow(
+                      'Precio unitario',
+                      currencyFormat.format(sale.amount / sale.quantity),
+                    ),
+                    const Divider(),
+                    Text(
+                      'ID: ${sale.id}',
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cerrar'),
+                  ),
+                ],
+              ),
+            );
           },
           child: Padding(
             padding: const EdgeInsets.all(AppTheme.spacingM),
@@ -410,6 +456,25 @@ class _SaleCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+            ),
+          ),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }

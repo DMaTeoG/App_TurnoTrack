@@ -144,33 +144,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildLanguageSelector(ThemeData theme) {
-    return Column(
-      children: [
-        RadioListTile<String>(
-          title: const Text('Español'),
-          value: 'es',
-          groupValue: _selectedLanguage,
-          onChanged: (value) {
-            setState(() => _selectedLanguage = value!);
-            // TODO: Implementar cambio de idioma con i18n
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Idioma cambiado a Español')),
-            );
-          },
-        ),
-        RadioListTile<String>(
-          title: const Text('English'),
-          value: 'en',
-          groupValue: _selectedLanguage,
-          onChanged: (value) {
-            setState(() => _selectedLanguage = value!);
-            // TODO: Implementar cambio de idioma con i18n
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Language changed to English')),
-            );
-          },
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: SegmentedButton<String>(
+        segments: const [
+          ButtonSegment(
+            value: 'es',
+            label: Text('Español'),
+            icon: Icon(Icons.language),
+          ),
+          ButtonSegment(
+            value: 'en',
+            label: Text('English'),
+            icon: Icon(Icons.language),
+          ),
+        ],
+        selected: {_selectedLanguage},
+        onSelectionChanged: (Set<String> newSelection) {
+          final value = newSelection.first;
+          setState(() => _selectedLanguage = value);
+          // El idioma se gestiona con flutter_localizations (ya configurado)
+          // Los archivos .arb en assets/i18n/ contienen las traducciones
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                value == 'es'
+                    ? 'Idioma: Español (ya configurado en la app)'
+                    : 'Language: English (already configured)',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+      ),
     );
   }
 

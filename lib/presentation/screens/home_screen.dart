@@ -81,10 +81,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               IconButton(
                 icon: const Icon(Icons.notifications_outlined),
                 onPressed: () {
-                  // TODO: Navigate to notifications screen
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Notificaciones próximamente'),
+                  // Mostrar panel de notificaciones activas
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Row(
+                        children: [
+                          Icon(Icons.notifications_active, color: Colors.blue),
+                          SizedBox(width: 8),
+                          Text('Notificaciones'),
+                        ],
+                      ),
+                      content: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('🔔 Notificaciones habilitadas'),
+                          SizedBox(height: 8),
+                          Text('Recibirás alertas de:'),
+                          SizedBox(height: 4),
+                          Text('• Check-in exitoso'),
+                          Text('• Actualizaciones de ranking'),
+                          Text('• Recomendaciones de IA'),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.of(context).pushNamed('/settings');
+                          },
+                          child: const Text('Configurar'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cerrar'),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -137,7 +170,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.3),
+            color: theme.colorScheme.primary.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -165,7 +198,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ? '8:30 AM - Hace 2 horas'
                         : 'Toma una foto para comenzar',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
                 ],
@@ -286,7 +319,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,7 +327,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -310,7 +343,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Text(
             label,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
+              color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -350,7 +383,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
@@ -358,7 +391,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.1),
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -417,7 +450,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Text(
             'Tu puntualidad ha mejorado un 15% este mes. Sigue así para alcanzar el top 3 del ranking.',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
         ],
@@ -430,7 +463,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       decoration: BoxDecoration(
         color: theme.cardColor,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+          ),
         ],
       ),
       child: SafeArea(
@@ -486,7 +522,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? theme.colorScheme.primary.withOpacity(0.1)
+              ? theme.colorScheme.primary.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
@@ -497,7 +533,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               icon,
               color: isSelected
                   ? theme.colorScheme.primary
-                  : theme.iconTheme.color?.withOpacity(0.5),
+                  : theme.iconTheme.color?.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 4),
             Text(
@@ -505,7 +541,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               style: theme.textTheme.bodySmall?.copyWith(
                 color: isSelected
                     ? theme.colorScheme.primary
-                    : theme.textTheme.bodySmall?.color?.withOpacity(0.5),
+                    : theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),

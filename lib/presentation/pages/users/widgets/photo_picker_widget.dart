@@ -141,7 +141,7 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget>
                 leading: Container(
                   padding: const EdgeInsets.all(AppTheme.spacingS),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue.withOpacity(0.1),
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                   ),
                   child: const Icon(
@@ -160,7 +160,7 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget>
                 leading: Container(
                   padding: const EdgeInsets.all(AppTheme.spacingS),
                   decoration: BoxDecoration(
-                    color: AppTheme.secondaryBlue.withOpacity(0.1),
+                    color: AppTheme.secondaryBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                   ),
                   child: const Icon(
@@ -180,7 +180,7 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget>
                   leading: Container(
                     padding: const EdgeInsets.all(AppTheme.spacingS),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
+                      color: Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                     ),
                     child: const Icon(Icons.delete, color: Colors.red),
@@ -226,13 +226,13 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget>
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                AppTheme.primaryBlue.withOpacity(0.3),
-                                AppTheme.secondaryBlue.withOpacity(0.3),
+                                AppTheme.primaryBlue.withValues(alpha: 0.3),
+                                AppTheme.secondaryBlue.withValues(alpha: 0.3),
                               ],
                             ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.primaryBlue.withOpacity(0.2),
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.2),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -255,7 +255,7 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryBlue.withOpacity(0.4),
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.4),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -295,7 +295,7 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget>
 
   Widget _buildPlaceholder() {
     return Container(
-      color: AppTheme.accentBlue.withOpacity(0.1),
+      color: AppTheme.accentBlue.withValues(alpha: 0.1),
       child: const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

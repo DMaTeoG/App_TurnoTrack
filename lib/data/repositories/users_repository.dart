@@ -144,6 +144,7 @@ class UsersRepository implements IUserRepository {
   }
 
   /// Listar workers de un supervisor específico
+  @override
   Future<List<UserModel>> getWorkersBySupervisor(String supervisorId) async {
     try {
       final response = await _datasource.client

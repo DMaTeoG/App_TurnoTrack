@@ -23,6 +23,14 @@ final attendanceRepositoryProvider = Provider<IAttendanceRepository>((ref) {
   return AttendanceRepositoryImpl(datasource);
 });
 
+// Provider de ubicaciones permitidas activas
+final allowedLocationsProvider = FutureProvider<List<LocationModel>>((
+  ref,
+) async {
+  final datasource = ref.read(supabaseDatasourceProvider);
+  return await datasource.getActiveLocations();
+});
+
 // Notifier para gestionar asistencias
 class AttendanceNotifier extends AsyncNotifier<List<AttendanceModel>> {
   late IAttendanceRepository _repository;
@@ -146,3 +154,29 @@ final attendanceProvider =
     AsyncNotifierProvider<AttendanceNotifier, List<AttendanceModel>>(
       AttendanceNotifier.new,
     );
+
+// Provider de asistencias recientes (últimos 30 días de toda la organización)
+// Útil para análisis predictivo de IA y dashboards gerenciales
+final recentOrganizationAttendanceProvider =
+    FutureProvider.autoDispose<List<AttendanceModel>>((ref) async {
+      final now = DateTime.now();
+      final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+
+      // Get attendance for all users in last 30 days
+      try {
+        final datasource = ref.read(supabaseDatasourceProvider);
+        final response = await datasource.client
+            .from('attendance')
+            .select()
+            .gte('check_in_time', thirtyDaysAgo.toIso8601String())
+            .lte('check_in_time', now.toIso8601String())
+            .order('check_in_time', ascending: false)
+            .limit(1000); // Limit to avoid performance issues
+
+        return (response as List)
+            .map((json) => AttendanceModel.fromJson(json))
+            .toList();
+      } catch (e) {
+        return []; // Return empty list on error
+      }
+    });

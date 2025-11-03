@@ -127,7 +127,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ]
                       : [
                           AppTheme.backgroundLight,
-                          AppTheme.lightBlue.withOpacity(0.1),
+                          AppTheme.lightBlue.withValues(alpha: 0.1),
                           AppTheme.backgroundLight,
                         ],
                 ),
@@ -174,7 +174,9 @@ class _SplashScreenState extends State<SplashScreen>
                               borderRadius: BorderRadius.circular(30),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppTheme.primaryBlue.withOpacity(0.3),
+                                  color: AppTheme.primaryBlue.withValues(
+                                    alpha: 0.3,
+                                  ),
                                   blurRadius: 30,
                                   spreadRadius: 5,
                                 ),
@@ -338,7 +340,7 @@ class _FloatingParticleState extends State<_FloatingParticle>
           width: widget.size,
           height: widget.size,
           decoration: BoxDecoration(
-            color: AppTheme.accentBlue.withOpacity(0.2),
+            color: AppTheme.accentBlue.withValues(alpha: 0.2),
             shape: BoxShape.circle,
           ),
         ),

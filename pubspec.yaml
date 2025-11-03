@@ -59,6 +59,10 @@ dependencies:
   share_plus: ^7.2.0
   # Storage & Paths
   path_provider: ^2.1.2
+  # Local storage and utility packages
+  shared_preferences: ^2.3.2
+  timezone: ^0.9.0
+  path: ^1.8.3
   # UI Components
   google_fonts: ^6.1.0
   flutter_animate: ^4.5.0
@@ -75,7 +79,6 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   mocktail: ^1.0.3
-  shared_preferences: ^2.3.2
   # Code generation
   build_runner: ^2.4.13
   freezed: ^2.5.2

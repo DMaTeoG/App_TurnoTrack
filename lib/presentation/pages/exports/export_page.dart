@@ -71,6 +71,7 @@ class ExportPage extends ConsumerWidget {
               ),
               onExport: () async {
                 final users = await ref.read(allUsersListProvider.future);
+                if (!context.mounted) return;
                 await _exportUsers(context, users);
               },
               isLoading: usersAsync.isLoading,
@@ -235,7 +236,7 @@ class _ExportCard extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 32),

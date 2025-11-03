@@ -102,7 +102,7 @@ class _UserListPageState extends ConsumerState<UserListPage> {
                 color: AppTheme.primaryBlue,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -125,11 +125,11 @@ class _UserListPageState extends ConsumerState<UserListPage> {
                     decoration: InputDecoration(
                       hintText: 'Buscar por nombre o documento...',
                       hintStyle: TextStyle(
-                        color: Colors.white.withOpacity(0.6),
+                        color: Colors.white.withValues(alpha: 0.6),
                       ),
                       prefixIcon: Icon(
                         Icons.search,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
@@ -144,7 +144,7 @@ class _UserListPageState extends ConsumerState<UserListPage> {
                             )
                           : null,
                       filled: true,
-                      fillColor: Colors.white.withOpacity(0.2),
+                      fillColor: Colors.white.withValues(alpha: 0.2),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(
                           AppTheme.radiusMedium,
@@ -271,7 +271,7 @@ class _UserListPageState extends ConsumerState<UserListPage> {
       child: Container(
         padding: const EdgeInsets.all(AppTheme.spacingM),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
         ),
         child: Column(
@@ -295,7 +295,7 @@ class _UserListPageState extends ConsumerState<UserListPage> {
             Text(
               label,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 12,
               ),
             ),
@@ -315,7 +315,7 @@ class _UserListPageState extends ConsumerState<UserListPage> {
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -401,8 +401,8 @@ class _UserListPageState extends ConsumerState<UserListPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: isActive
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.grey.withOpacity(0.1),
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : Colors.grey.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
               ),
               child: Text(

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/export_provider.dart';
+import '../providers/attendance_provider.dart';
+import '../providers/analytics_provider.dart';
+import '../providers/auth_provider.dart';
 
 /// Pantalla de generación de reportes con exportación CSV
 class ReportsScreen extends ConsumerStatefulWidget {
@@ -88,17 +91,25 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Tipo de Reporte', style: theme.textTheme.titleMedium),
-            RadioListTile<String>(
-              title: const Text('Asistencias'),
-              value: 'attendance',
-              groupValue: _reportType,
-              onChanged: (value) => setState(() => _reportType = value!),
-            ),
-            RadioListTile<String>(
-              title: const Text('Métricas'),
-              value: 'performance',
-              groupValue: _reportType,
-              onChanged: (value) => setState(() => _reportType = value!),
+            const SizedBox(height: 12),
+            // Usar SegmentedButton (Material 3) en lugar de Radio deprecado
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                  value: 'attendance',
+                  label: Text('Asistencias'),
+                  icon: Icon(Icons.access_time),
+                ),
+                ButtonSegment(
+                  value: 'performance',
+                  label: Text('Métricas'),
+                  icon: Icon(Icons.analytics),
+                ),
+              ],
+              selected: {_reportType},
+              onSelectionChanged: (Set<String> newSelection) {
+                setState(() => _reportType = newSelection.first);
+              },
             ),
           ],
         ),
@@ -158,11 +169,29 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     try {
       if (_reportType == 'attendance') {
-        // TODO: Obtener asistencias del rango de fechas desde attendanceRepositoryProvider
-        await ref.read(exportNotifierProvider.notifier).exportAttendance([]);
+        // Obtener asistencias usando el provider existente
+        final attendances = await ref
+            .read(attendanceRepositoryProvider)
+            .getAttendanceByUser(
+              userId: ref.read(authNotifierProvider).value!.id,
+              startDate: _dateRange!.start,
+              endDate: _dateRange!.end,
+            );
+        await ref
+            .read(exportNotifierProvider.notifier)
+            .exportAttendance(attendances);
       } else {
-        // TODO: Obtener métricas del rango de fechas desde analyticsProvider
-        await ref.read(exportNotifierProvider.notifier).exportPerformance([]);
+        // Obtener métricas usando el provider existente
+        final dateRange = DateRange(
+          startDate: _dateRange!.start,
+          endDate: _dateRange!.end,
+        );
+        final metrics = await ref.read(
+          userPerformanceMetricsProvider(dateRange).future,
+        );
+        await ref.read(exportNotifierProvider.notifier).exportPerformance([
+          metrics,
+        ]);
       }
     } catch (e) {
       setState(() => _isGenerating = false);

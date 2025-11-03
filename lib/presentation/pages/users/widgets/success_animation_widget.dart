@@ -132,7 +132,7 @@ class _SuccessAnimationWidgetState extends State<SuccessAnimationWidget>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Container(
-        color: Colors.black.withOpacity(0.7),
+        color: Colors.black.withValues(alpha: 0.7),
         child: Stack(
           children: [
             // Confetti particles
@@ -189,7 +189,7 @@ class _SuccessAnimationWidgetState extends State<SuccessAnimationWidget>
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.white.withOpacity(0.5),
+                                  color: Colors.white.withValues(alpha: 0.5),
                                   blurRadius: 30,
                                   spreadRadius: 10,
                                 ),
@@ -229,7 +229,7 @@ class _SuccessAnimationWidgetState extends State<SuccessAnimationWidget>
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(
                         AppTheme.radiusMedium,
                       ),
@@ -252,7 +252,7 @@ class _SuccessAnimationWidgetState extends State<SuccessAnimationWidget>
                         ? 'Los cambios han sido guardados exitosamente'
                         : 'El usuario puede acceder al sistema ahora',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 16,
                     ),
                   ),

@@ -170,7 +170,7 @@ class _RankingPageState extends ConsumerState<RankingPage>
                     left: math.Random().nextDouble() * 400,
                     child: Icon(
                       Icons.star,
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 0.1),
                       size: 20 + (math.Random().nextDouble() * 10),
                     ),
                   );
@@ -215,7 +215,62 @@ class _RankingPageState extends ConsumerState<RankingPage>
                     ),
                     TextButton.icon(
                       onPressed: () {
-                        // TODO: Filter options
+                        // Mostrar opciones de filtro
+                        showModalBottomSheet(
+                          context: context,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(20),
+                            ),
+                          ),
+                          builder: (context) => Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Filtrar Ranking',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                ListTile(
+                                  leading: const Icon(Icons.people),
+                                  title: const Text('Mi equipo'),
+                                  subtitle: const Text(
+                                    'Solo trabajadores de mi equipo',
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Filtro: Mi equipo'),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.business),
+                                  title: const Text('Toda la organización'),
+                                  subtitle: const Text(
+                                    'Todos los trabajadores',
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Filtro: Organización'),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.filter_list),
                       label: const Text('Filtros'),
@@ -242,7 +297,7 @@ class _RankingPageState extends ConsumerState<RankingPage>
                     ),
                   ),
                 );
-              }).toList(),
+              }),
 
               const SizedBox(height: 100),
             ],
@@ -262,7 +317,7 @@ class _RankingPageState extends ConsumerState<RankingPage>
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -410,7 +465,7 @@ class _RankingPageState extends ConsumerState<RankingPage>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: colors[place - 1][0].withOpacity(0.4),
+                      color: colors[place - 1][0].withValues(alpha: 0.4),
                       blurRadius: 20,
                       spreadRadius: 2,
                     ),
@@ -466,7 +521,7 @@ class _RankingPageState extends ConsumerState<RankingPage>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: colors[place - 1][1].withOpacity(0.3),
+                      color: colors[place - 1][1].withValues(alpha: 0.3),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
@@ -510,7 +565,7 @@ class _RankingPageState extends ConsumerState<RankingPage>
           borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.primaryBlue.withOpacity(0.3),
+              color: AppTheme.primaryBlue.withValues(alpha: 0.3),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -551,7 +606,7 @@ class _RankingPageState extends ConsumerState<RankingPage>
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.success.withOpacity(0.3),
+                    color: AppTheme.success.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -606,7 +661,7 @@ class _RankingPageState extends ConsumerState<RankingPage>
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: Colors.white, size: 24),
@@ -721,7 +776,7 @@ class _RankingPageState extends ConsumerState<RankingPage>
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -748,7 +803,7 @@ class _RankingPageState extends ConsumerState<RankingPage>
                 height: 50,
                 decoration: BoxDecoration(
                   color: badge.unlocked
-                      ? badge.color.withOpacity(0.2)
+                      ? badge.color.withValues(alpha: 0.2)
                       : Colors.grey[200],
                   shape: BoxShape.circle,
                 ),
@@ -792,19 +847,19 @@ class _RankingPageState extends ConsumerState<RankingPage>
       padding: const EdgeInsets.all(AppTheme.spacingM),
       decoration: BoxDecoration(
         color: isCurrentUser
-            ? AppTheme.primaryBlue.withOpacity(0.1)
+            ? AppTheme.primaryBlue.withValues(alpha: 0.1)
             : Colors.white,
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         border: Border.all(
           color: isCurrentUser
               ? AppTheme.primaryBlue
-              : Colors.grey.withOpacity(0.1),
+              : Colors.grey.withValues(alpha: 0.1),
           width: isCurrentUser ? 2 : 1,
         ),
         boxShadow: isCurrentUser
             ? [
                 BoxShadow(
-                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),

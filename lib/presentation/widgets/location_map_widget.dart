@@ -110,7 +110,7 @@ class _LocationMapWidgetState extends State<LocationMapWidget> {
                               size: 40,
                               shadows: [
                                 Shadow(
-                                  color: Colors.black.withOpacity(0.3),
+                                  color: Colors.black.withValues(alpha: 0.3),
                                   blurRadius: 4,
                                 ),
                               ],
@@ -137,7 +137,7 @@ class _LocationMapWidgetState extends State<LocationMapWidget> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
+                                color: Colors.black.withValues(alpha: 0.3),
                                 blurRadius: 8,
                                 spreadRadius: 2,
                               ),
@@ -165,7 +165,7 @@ class _LocationMapWidgetState extends State<LocationMapWidget> {
             child: Material(
               elevation: 4,
               borderRadius: BorderRadius.circular(12),
-              color: theme.cardColor.withOpacity(0.95),
+              color: theme.cardColor.withValues(alpha: 0.95),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(

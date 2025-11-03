@@ -31,10 +31,10 @@ class LocationService {
       throw Exception('Servicios de ubicación deshabilitados');
     }
 
+    // Use the new settings-based API and apply a timeout to preserve the previous behavior
     return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-      timeLimit: const Duration(seconds: 10),
-    );
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    ).timeout(const Duration(seconds: 10));
   }
 
   Future<String?> getAddressFromCoordinates(

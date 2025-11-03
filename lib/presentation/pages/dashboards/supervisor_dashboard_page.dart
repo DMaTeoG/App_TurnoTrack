@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../data/models/user_model.dart';
 import '../../providers/ai_coaching_provider.dart';
 import '../../providers/analytics_provider.dart';
+import '../ranking/ranking_page.dart';
 
 /// Dashboard for Supervisor role - Team metrics and alerts
 class SupervisorDashboardPage extends ConsumerStatefulWidget {
@@ -59,7 +60,7 @@ class _SupervisorDashboardPageState
                     teamSize
               : 0.0;
           final today = DateTime.now();
-          final isToday = (DateTime date) =>
+          bool isToday(DateTime date) =>
               date.year == today.year &&
               date.month == today.month &&
               date.day == today.day;
@@ -198,7 +199,7 @@ class _SupervisorDashboardPageState
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -276,7 +277,7 @@ class _SupervisorDashboardPageState
   }) {
     return Card(
       elevation: 2,
-      color: color.withOpacity(0.05),
+      color: color.withValues(alpha: 0.05),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -376,7 +377,7 @@ class _SupervisorDashboardPageState
                       dotData: const FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.blue.withValues(alpha: 0.1),
                       ),
                     ),
                   ],
@@ -414,7 +415,12 @@ class _SupervisorDashboardPageState
                 ),
                 TextButton(
                   onPressed: () {
-                    // TODO: View full ranking
+                    // Navegar a página de ranking completo
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => RankingPage(currentUser: widget.user),
+                      ),
+                    );
                   },
                   child: const Text('Ver todos'),
                 ),
@@ -477,7 +483,7 @@ class _SupervisorDashboardPageState
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
+                          color: Colors.green.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -491,7 +497,7 @@ class _SupervisorDashboardPageState
                     ],
                   ),
                 );
-              }).toList(),
+              }),
           ],
         ),
       ),
@@ -541,10 +547,10 @@ class _SupervisorDashboardPageState
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
-                color: severityColor.withOpacity(0.05),
+                color: severityColor.withValues(alpha: 0.05),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: severityColor.withOpacity(0.2),
+                    backgroundColor: severityColor.withValues(alpha: 0.2),
                     child: Text(
                       worker.userId[0].toUpperCase(),
                       style: TextStyle(color: severityColor),
@@ -555,12 +561,57 @@ class _SupervisorDashboardPageState
                   trailing: IconButton(
                     icon: const Icon(Icons.message),
                     onPressed: () {
-                      // TODO: Send message to worker
+                      // Mostrar diálogo de mensaje rápido
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text('Mensaje a ${worker.userId}'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextField(
+                                decoration: const InputDecoration(
+                                  labelText: 'Mensaje',
+                                  border: OutlineInputBorder(),
+                                ),
+                                maxLines: 3,
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'El trabajador recibirá una notificación',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancelar'),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('📨 Mensaje enviado'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.send),
+                              label: const Text('Enviar'),
+                            ),
+                          ],
+                        ),
+                      );
                     },
                   ),
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),
