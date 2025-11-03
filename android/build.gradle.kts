@@ -5,7 +5,7 @@ allprojects {
     }
 }
 
-// Configuración global de Java para todos los subproyectos
+// Configuración global de Java y Kotlin para todos los subproyectos
 subprojects {
     afterEvaluate {
         if (project.hasProperty("android")) {
@@ -14,6 +14,13 @@ subprojects {
                     sourceCompatibility = JavaVersion.VERSION_17
                     targetCompatibility = JavaVersion.VERSION_17
                 }
+            }
+        }
+        
+        // Configurar Kotlin JVM target para todos los plugins
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            kotlinOptions {
+                jvmTarget = "17"
             }
         }
     }
