@@ -18,8 +18,10 @@ class SupabaseDatasource {
     );
 
     if (response.user != null) {
-      return await getUserById(response.user!.id);
+      final userModel = await getUserById(response.user!.id);
+      return userModel;
     }
+
     return null;
   }
 
@@ -33,9 +35,17 @@ class SupabaseDatasource {
 
   // Users
   Future<UserModel?> getUserById(String id) async {
-    final response = await _client.from('users').select().eq('id', id).single();
+    try {
+      final response = await _client
+          .from('users')
+          .select()
+          .eq('id', id)
+          .single();
 
-    return UserModel.fromJson(response);
+      return UserModel.fromJson(response);
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<List<UserModel>> getUsersBySupervisor(String supervisorId) async {

@@ -26,6 +26,7 @@ mixin _$UserModel {
   String get role => throw _privateConstructorUsedError;
   bool get isActive => throw _privateConstructorUsedError;
   String? get photoUrl => throw _privateConstructorUsedError;
+  String? get phone => throw _privateConstructorUsedError;
   String? get supervisorId => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
@@ -48,6 +49,7 @@ abstract class $UserModelCopyWith<$Res> {
       String role,
       bool isActive,
       String? photoUrl,
+      String? phone,
       String? supervisorId,
       DateTime? createdAt,
       DateTime? updatedAt});
@@ -72,6 +74,7 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
     Object? role = null,
     Object? isActive = null,
     Object? photoUrl = freezed,
+    Object? phone = freezed,
     Object? supervisorId = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -100,6 +103,10 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
       photoUrl: freezed == photoUrl
           ? _value.photoUrl
           : photoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      phone: freezed == phone
+          ? _value.phone
+          : phone // ignore: cast_nullable_to_non_nullable
               as String?,
       supervisorId: freezed == supervisorId
           ? _value.supervisorId
@@ -132,6 +139,7 @@ abstract class _$$UserModelImplCopyWith<$Res>
       String role,
       bool isActive,
       String? photoUrl,
+      String? phone,
       String? supervisorId,
       DateTime? createdAt,
       DateTime? updatedAt});
@@ -154,6 +162,7 @@ class __$$UserModelImplCopyWithImpl<$Res>
     Object? role = null,
     Object? isActive = null,
     Object? photoUrl = freezed,
+    Object? phone = freezed,
     Object? supervisorId = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -183,6 +192,10 @@ class __$$UserModelImplCopyWithImpl<$Res>
           ? _value.photoUrl
           : photoUrl // ignore: cast_nullable_to_non_nullable
               as String?,
+      phone: freezed == phone
+          ? _value.phone
+          : phone // ignore: cast_nullable_to_non_nullable
+              as String?,
       supervisorId: freezed == supervisorId
           ? _value.supervisorId
           : supervisorId // ignore: cast_nullable_to_non_nullable
@@ -209,6 +222,7 @@ class _$UserModelImpl implements _UserModel {
       required this.role,
       required this.isActive,
       this.photoUrl,
+      this.phone,
       this.supervisorId,
       this.createdAt,
       this.updatedAt});
@@ -229,6 +243,8 @@ class _$UserModelImpl implements _UserModel {
   @override
   final String? photoUrl;
   @override
+  final String? phone;
+  @override
   final String? supervisorId;
   @override
   final DateTime? createdAt;
@@ -237,7 +253,7 @@ class _$UserModelImpl implements _UserModel {
 
   @override
   String toString() {
-    return 'UserModel(id: $id, email: $email, fullName: $fullName, role: $role, isActive: $isActive, photoUrl: $photoUrl, supervisorId: $supervisorId, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'UserModel(id: $id, email: $email, fullName: $fullName, role: $role, isActive: $isActive, photoUrl: $photoUrl, phone: $phone, supervisorId: $supervisorId, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -254,6 +270,7 @@ class _$UserModelImpl implements _UserModel {
                 other.isActive == isActive) &&
             (identical(other.photoUrl, photoUrl) ||
                 other.photoUrl == photoUrl) &&
+            (identical(other.phone, phone) || other.phone == phone) &&
             (identical(other.supervisorId, supervisorId) ||
                 other.supervisorId == supervisorId) &&
             (identical(other.createdAt, createdAt) ||
@@ -265,7 +282,7 @@ class _$UserModelImpl implements _UserModel {
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, id, email, fullName, role,
-      isActive, photoUrl, supervisorId, createdAt, updatedAt);
+      isActive, photoUrl, phone, supervisorId, createdAt, updatedAt);
 
   @JsonKey(ignore: true)
   @override
@@ -289,6 +306,7 @@ abstract class _UserModel implements UserModel {
       required final String role,
       required final bool isActive,
       final String? photoUrl,
+      final String? phone,
       final String? supervisorId,
       final DateTime? createdAt,
       final DateTime? updatedAt}) = _$UserModelImpl;
@@ -308,6 +326,8 @@ abstract class _UserModel implements UserModel {
   bool get isActive;
   @override
   String? get photoUrl;
+  @override
+  String? get phone;
   @override
   String? get supervisorId;
   @override

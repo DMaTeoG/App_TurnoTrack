@@ -12,13 +12,31 @@ class UserModel with _$UserModel {
     required String role,
     required bool isActive,
     String? photoUrl,
+    String? phone,
     String? supervisorId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) = _UserModel;
 
-  factory UserModel.fromJson(Map<String, dynamic> json) =>
-      _$UserModelFromJson(json);
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    // Convertir snake_case a camelCase
+    return UserModel(
+      id: json['id'] as String,
+      email: json['email'] as String,
+      fullName: json['full_name'] as String,
+      role: json['role'] as String,
+      isActive: json['is_active'] as bool,
+      photoUrl: json['photo_url'] as String?,
+      phone: json['phone'] as String?,
+      supervisorId: json['supervisor_id'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
+    );
+  }
 }
 
 @freezed

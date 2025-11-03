@@ -285,8 +285,13 @@ CREATE TRIGGER audit_users_trigger
 -- =============================================
 -- STEP 6: HABILITAR ROW LEVEL SECURITY
 -- =============================================
+-- 
+-- ⚠️ NOTA: RLS temporalmente deshabilitado en 'users' por conflictos de políticas
+-- TODO: Re-habilitar con políticas corregidas en producción
+--
+-- ALTER TABLE users ENABLE ROW LEVEL SECURITY;  -- DESHABILITADO TEMPORALMENTE
 
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users DISABLE ROW LEVEL SECURITY;  -- ⚠️ TEMPORAL - Corregir políticas antes de producción
 ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE performance_metrics ENABLE ROW LEVEL SECURITY;

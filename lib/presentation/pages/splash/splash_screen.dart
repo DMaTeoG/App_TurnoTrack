@@ -87,9 +87,13 @@ class _SplashScreenState extends State<SplashScreen>
     _pulseController.stop();
     await _fadeController.forward();
 
-    // 5. Navigate
+    // 5. Navigate - Esperar al siguiente frame para asegurar contexto válido
     if (mounted) {
-      widget.onAnimationComplete();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          widget.onAnimationComplete();
+        }
+      });
     }
   }
 
@@ -200,7 +204,7 @@ class _SplashScreenState extends State<SplashScreen>
                     animation: _logoController,
                     builder: (context, child) {
                       return Opacity(
-                        opacity: _scaleAnimation.value,
+                        opacity: _scaleAnimation.value.clamp(0.0, 1.0),
                         child: Text(
                           'TurnoTrack',
                           style: Theme.of(context).textTheme.displayMedium
@@ -223,7 +227,7 @@ class _SplashScreenState extends State<SplashScreen>
                     animation: _logoController,
                     builder: (context, child) {
                       return Opacity(
-                        opacity: _scaleAnimation.value * 0.7,
+                        opacity: (_scaleAnimation.value * 0.7).clamp(0.0, 1.0),
                         child: Text(
                           'Gestión inteligente de asistencia',
                           style: Theme.of(context).textTheme.bodyMedium
@@ -249,7 +253,7 @@ class _SplashScreenState extends State<SplashScreen>
                 animation: _logoController,
                 builder: (context, child) {
                   return Opacity(
-                    opacity: _scaleAnimation.value,
+                    opacity: _scaleAnimation.value.clamp(0.0, 1.0),
                     child: Center(
                       child: SizedBox(
                         width: 40,

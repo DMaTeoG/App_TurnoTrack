@@ -13,7 +13,11 @@ import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/check_in_screen.dart';
 import 'presentation/screens/settings_screen.dart';
 import 'presentation/screens/reports_screen.dart';
+import 'presentation/pages/dashboards/manager_dashboard_page.dart';
+import 'presentation/pages/dashboards/supervisor_dashboard_page.dart';
+import 'presentation/pages/dashboards/worker_dashboard_page.dart';
 import 'presentation/providers/theme_provider.dart';
+import 'presentation/providers/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,10 +71,14 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
-      home: SplashScreen(
-        onAnimationComplete: () {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
+      home: Builder(
+        builder: (navigatorContext) {
+          return SplashScreen(
+            onAnimationComplete: () {
+              Navigator.of(navigatorContext).pushReplacement(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            },
           );
         },
       ),
@@ -80,6 +88,83 @@ class MyApp extends ConsumerWidget {
         '/check-in': (context) => const CheckInScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/reports': (context) => const ReportsScreen(),
+        '/manager': (context) {
+          // Obtener el usuario actual del provider
+          return Consumer(
+            builder: (context, ref, _) {
+              final authState = ref.watch(authNotifierProvider);
+              return authState.when(
+                data: (user) {
+                  if (user == null) {
+                    // Si no hay usuario, redirigir a login
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      Navigator.of(context).pushReplacementNamed('/login');
+                    });
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  return ManagerDashboardPage(user: user);
+                },
+                loading: () => const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                ),
+                error: (err, stack) =>
+                    Scaffold(body: Center(child: Text('Error: $err'))),
+              );
+            },
+          );
+        },
+        '/supervisor': (context) {
+          return Consumer(
+            builder: (context, ref, _) {
+              final authState = ref.watch(authNotifierProvider);
+              return authState.when(
+                data: (user) {
+                  if (user == null) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      Navigator.of(context).pushReplacementNamed('/login');
+                    });
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  return SupervisorDashboardPage(user: user);
+                },
+                loading: () => const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                ),
+                error: (err, stack) =>
+                    Scaffold(body: Center(child: Text('Error: $err'))),
+              );
+            },
+          );
+        },
+        '/worker': (context) {
+          return Consumer(
+            builder: (context, ref, _) {
+              final authState = ref.watch(authNotifierProvider);
+              return authState.when(
+                data: (user) {
+                  if (user == null) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      Navigator.of(context).pushReplacementNamed('/login');
+                    });
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  return WorkerDashboardPage(user: user);
+                },
+                loading: () => const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                ),
+                error: (err, stack) =>
+                    Scaffold(body: Center(child: Text('Error: $err'))),
+              );
+            },
+          );
+        },
       },
     );
   }

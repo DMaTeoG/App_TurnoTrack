@@ -14,6 +14,7 @@ _$UserModelImpl _$$UserModelImplFromJson(Map<String, dynamic> json) =>
       role: json['role'] as String,
       isActive: json['isActive'] as bool,
       photoUrl: json['photoUrl'] as String?,
+      phone: json['phone'] as String?,
       supervisorId: json['supervisorId'] as String?,
       createdAt: json['createdAt'] == null
           ? null
@@ -31,6 +32,7 @@ Map<String, dynamic> _$$UserModelImplToJson(_$UserModelImpl instance) =>
       'role': instance.role,
       'isActive': instance.isActive,
       'photoUrl': instance.photoUrl,
+      'phone': instance.phone,
       'supervisorId': instance.supervisorId,
       'createdAt': instance.createdAt?.toIso8601String(),
       'updatedAt': instance.updatedAt?.toIso8601String(),
