@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
@@ -23,13 +24,16 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  // Cargar variables de entorno desde el archivo .env
+  await dotenv.load(fileName: '.env');
+
   // Inicializar Supabase
   await Supabase.initialize(
     url: AppConstants.supabaseUrl,
     anonKey: AppConstants.supabaseAnonKey,
   );
 
-  // Inicializar SharedPreferences (reemplaza LocalStorage/Hive)
+  // Inicializar SharedPreferences
   final prefs = await SharedPreferences.getInstance();
 
   // Inicializar servicio de notificaciones
