@@ -1,4 +1,5 @@
 {
+  "@@locale": "en",
   "appTitle": "TurnoTrack",
   "loginTitle": "Sign in",
   "homeWelcome": "Hello {name}",

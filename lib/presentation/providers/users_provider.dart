@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/repositories/users_repository.dart';
 import '../../data/models/user_model.dart';
 import 'auth_provider.dart';
@@ -69,18 +70,30 @@ final userStatisticsProvider = FutureProvider.autoDispose<Map<String, int>>((
   return repository.getUserStatistics();
 });
 
+/// Provider para obtener un usuario por ID
+/// Se usa para cargar datos al editar
+final userByIdProvider = FutureProvider.family.autoDispose<UserModel, String>((
+  ref,
+  String userId,
+) async {
+  final repository = ref.watch(usersRepositoryProvider);
+  return repository.getUserById(userId);
+});
+
 // ============================================
 // HELPERS PARA OPERACIONES
 // ============================================
 
-/// Crear nuevo usuario
+/// Crear nuevo usuario con cuenta de Auth
 /// Usar en formularios: await ref.read(createUserProvider)(params)
 final createUserProvider = Provider((ref) {
   final repository = ref.read(usersRepositoryProvider);
+  final supabase = ref.read(supabaseDatasourceProvider).client;
 
   return ({
     required String email,
     required String fullName,
+    required String password,
     required String role,
     String? phone,
     File? photoFile,
@@ -88,21 +101,37 @@ final createUserProvider = Provider((ref) {
     bool isActive = true,
   }) async {
     try {
-      String? photoUrl;
-
-      // Crear usuario
-      final user = await repository.createUser(
+      // 1. Crear usuario en Supabase Auth usando signUp
+      final authResponse = await supabase.auth.signUp(
         email: email,
-        fullName: fullName,
-        role: role,
-        phone: phone,
-        supervisorId: supervisorId,
-        isActive: isActive,
+        password: password,
+        data: {'full_name': fullName, 'role': role},
       );
 
-      // Si hay foto, subirla y actualizar
+      if (authResponse.user == null) {
+        throw Exception('Error al crear cuenta de usuario');
+      }
+
+      // 2. Crear registro en tabla users con el mismo ID
+      final userResponse = await supabase
+          .from('users')
+          .insert({
+            'id': authResponse.user!.id,
+            'email': email,
+            'full_name': fullName,
+            'role': role,
+            'phone': phone,
+            'supervisor_id': supervisorId,
+            'is_active': isActive,
+          })
+          .select()
+          .single();
+
+      final user = UserModel.fromJson(userResponse);
+
+      // 3. Si hay foto, subirla y actualizar
       if (photoFile != null) {
-        photoUrl = await repository.uploadProfilePhoto(
+        final photoUrl = await repository.uploadProfilePhoto(
           userId: user.id,
           photoFile: photoFile,
         );
@@ -111,8 +140,15 @@ final createUserProvider = Provider((ref) {
       }
 
       return user;
+    } on AuthException catch (e) {
+      if (e.message.contains('already registered')) {
+        throw Exception('El email ya está registrado');
+      }
+      throw Exception('Error de autenticación: ${e.message}');
+    } on PostgrestException catch (e) {
+      throw Exception('Error en base de datos: ${e.message}');
     } catch (e) {
-      rethrow;
+      throw Exception('Error al crear usuario: $e');
     }
   };
 });

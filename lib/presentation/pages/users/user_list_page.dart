@@ -65,11 +65,16 @@ class _UserListPageState extends ConsumerState<UserListPage> {
     ).push(SmoothPageRoute(page: const CreateUserPage()));
 
     if (result == true && mounted) {
-      // Recargar lista
+      // Refrescar lista de usuarios
+      ref.read(paginatedUsersProvider.notifier).refresh();
+      ref.invalidate(userStatisticsProvider);
+
+      // Mostrar confirmación
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('✅ Usuario creado exitosamente'),
           backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
         ),
       );
     }

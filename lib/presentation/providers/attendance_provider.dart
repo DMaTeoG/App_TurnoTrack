@@ -180,3 +180,62 @@ final recentOrganizationAttendanceProvider =
         return []; // Return empty list on error
       }
     });
+
+/// Provider para historial de asistencias con filtros de fecha
+/// Usado en AttendanceHistoryPage
+final userAttendanceHistoryProvider = FutureProvider.autoDispose
+    .family<List<AttendanceModel>, AttendanceHistoryParams>((
+      ref,
+      params,
+    ) async {
+      try {
+        final datasource = ref.read(supabaseDatasourceProvider);
+
+        // Si no se especifica userId, usar el usuario actual
+        String? targetUserId = params.userId;
+        if (targetUserId == null) {
+          final currentUser = ref.read(authNotifierProvider).value;
+          if (currentUser == null) throw Exception('Usuario no autenticado');
+          targetUserId = currentUser.id;
+        }
+
+        final response = await datasource.client
+            .from('attendance')
+            .select()
+            .eq('user_id', targetUserId)
+            .gte('check_in_time', params.startDate.toIso8601String())
+            .lte('check_in_time', params.endDate.toIso8601String())
+            .order('check_in_time', ascending: false);
+
+        return (response as List)
+            .map((json) => AttendanceModel.fromJson(json))
+            .toList();
+      } catch (e) {
+        rethrow;
+      }
+    });
+
+/// Parámetros para el provider de historial
+class AttendanceHistoryParams {
+  final String? userId;
+  final DateTime startDate;
+  final DateTime endDate;
+
+  const AttendanceHistoryParams({
+    this.userId,
+    required this.startDate,
+    required this.endDate,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AttendanceHistoryParams &&
+          runtimeType == other.runtimeType &&
+          userId == other.userId &&
+          startDate == other.startDate &&
+          endDate == other.endDate;
+
+  @override
+  int get hashCode => userId.hashCode ^ startDate.hashCode ^ endDate.hashCode;
+}

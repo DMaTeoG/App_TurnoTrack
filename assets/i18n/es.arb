@@ -1,12 +1,13 @@
 {
+  "@@locale": "es",
   "appTitle": "TurnoTrack",
-  "loginTitle": "Iniciar sesion",
+  "loginTitle": "Iniciar sesión",
   "homeWelcome": "Hola {name}",
   "registroEntrada": "Registrar entrada",
   "registroSalida": "Registrar salida",
-  "gestionTitle": "Gestion de personal",
-  "analiticaTitle": "Analitica",
-  "desempenoTitle": "Desempeno e IA",
+  "gestionTitle": "Gestión de personal",
+  "analiticaTitle": "Analítica",
+  "desempenoTitle": "Desempeño e IA",
   "@homeWelcome": {
     "placeholders": {
       "name": {

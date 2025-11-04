@@ -67,10 +67,12 @@ class _CreateUserPageState extends ConsumerState<CreateUserPage>
       _createdUserName = userName;
     });
 
-    // Volver después de 3 segundos
-    Future.delayed(const Duration(seconds: 3), () {
+    // Volver después de 2 segundos y refrescar lista
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
-        Navigator.of(context).pop(true); // Retorna true para indicar éxito
+        Navigator.of(
+          context,
+        ).pop(true); // Retorna true para indicar éxito y refrescar
       }
     });
   }

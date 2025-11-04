@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/models/user_model.dart';
 import '../../providers/analytics_provider.dart';
-import '../../providers/ai_coaching_provider.dart';
-import '../../providers/attendance_provider.dart';
 
 /// Dashboard for Manager role - Organization-wide KPIs and insights
 class ManagerDashboardPage extends ConsumerStatefulWidget {
@@ -135,10 +133,28 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _generateAttendancePredictions(),
-        icon: const Icon(Icons.assessment),
-        label: const Text('Predicciones IA'),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // Botón para crear usuarios
+          FloatingActionButton(
+            heroTag: 'createUser',
+            onPressed: () {
+              Navigator.pushNamed(context, '/users');
+            },
+            backgroundColor: Colors.green,
+            child: const Icon(Icons.person_add),
+          ),
+          const SizedBox(height: 12),
+          // Botón de predicciones IA
+          FloatingActionButton.extended(
+            heroTag: 'predictions',
+            onPressed: () => _generateAttendancePredictions(),
+            icon: const Icon(Icons.psychology),
+            label: const Text('IA'),
+            backgroundColor: Colors.purple,
+          ),
+        ],
       ),
     );
   }
@@ -254,38 +270,40 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     return Card(
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
+            // Header con icono y trend
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(icon, color: color, size: 28),
+                Icon(icon, color: color, size: 24),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                    horizontal: 6,
+                    vertical: 2,
                   ),
                   decoration: BoxDecoration(
                     color: (trendUp ? Colors.green : Colors.red).withValues(
                       alpha: 0.1,
                     ),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         trendUp ? Icons.trending_up : Icons.trending_down,
-                        size: 14,
+                        size: 12,
                         color: trendUp ? Colors.green : Colors.red,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 2),
                       Text(
                         trend,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: trendUp ? Colors.green : Colors.red,
                           fontWeight: FontWeight.bold,
                         ),
@@ -295,23 +313,32 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                 ),
               ],
             ),
-            const Spacer(),
+            const SizedBox(height: 8),
+            // Valor principal
             Text(
               value,
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
+            // Título
             Text(
               title,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 color: Colors.grey[600],
                 fontWeight: FontWeight.w500,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
+            // Subtitle
             Text(
               subtitle,
-              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+              style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -320,6 +347,8 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
   }
 
   Widget _buildAttendanceTrendChart() {
+    final trendAsync = ref.watch(attendanceTrendProvider);
+
     return Card(
       elevation: 2,
       child: Padding(
@@ -334,125 +363,203 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                   'Tendencia de Asistencia',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    '↑ Tendencia positiva',
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                trendAsync.when(
+                  data: (trends) {
+                    if (trends.isEmpty) return const SizedBox.shrink();
+                    final lastTwo = trends.length >= 2
+                        ? trends.sublist(trends.length - 2)
+                        : trends;
+                    final isPositive =
+                        lastTwo.length == 2 &&
+                        lastTwo.last.punctualityRate >
+                            lastTwo.first.punctualityRate;
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (isPositive ? Colors.green : Colors.orange)
+                            .withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        isPositive
+                            ? '↑ Tendencia positiva'
+                            : '↓ Tendencia negativa',
+                        style: TextStyle(
+                          color: isPositive ? Colors.green : Colors.orange,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  },
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
                 ),
               ],
             ),
             const SizedBox(height: 20),
             SizedBox(
               height: 200,
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    horizontalInterval: 20,
-                    getDrawingHorizontalLine: (value) {
-                      return FlLine(color: Colors.grey[200], strokeWidth: 1);
-                    },
-                  ),
-                  titlesData: FlTitlesData(
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (value, meta) {
-                          const months = [
-                            'Ene',
-                            'Feb',
-                            'Mar',
-                            'Abr',
-                            'May',
-                            'Jun',
-                          ];
-                          if (value.toInt() >= 0 &&
-                              value.toInt() < months.length) {
-                            return Text(
-                              months[value.toInt()],
-                              style: const TextStyle(fontSize: 10),
-                            );
-                          }
-                          return const Text('');
-                        },
+              child: trendAsync.when(
+                data: (trends) {
+                  if (trends.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.inbox_outlined,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No hay datos de tendencia disponibles',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 40,
-                        getTitlesWidget: (value, meta) {
-                          return Text(
-                            '${value.toInt()}%',
-                            style: const TextStyle(fontSize: 10),
+                    );
+                  }
+
+                  final months = [
+                    'Ene',
+                    'Feb',
+                    'Mar',
+                    'Abr',
+                    'May',
+                    'Jun',
+                    'Jul',
+                    'Ago',
+                    'Sep',
+                    'Oct',
+                    'Nov',
+                    'Dic',
+                  ];
+
+                  return LineChart(
+                    LineChartData(
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: 20,
+                        getDrawingHorizontalLine: (value) {
+                          return FlLine(
+                            color: Colors.grey[200],
+                            strokeWidth: 1,
                           );
                         },
                       ),
+                      titlesData: FlTitlesData(
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (value, meta) {
+                              if (value.toInt() >= 0 &&
+                                  value.toInt() < trends.length) {
+                                final month = trends[value.toInt()].month;
+                                return Text(
+                                  months[month.month - 1],
+                                  style: const TextStyle(fontSize: 10),
+                                );
+                              }
+                              return const Text('');
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            getTitlesWidget: (value, meta) {
+                              return Text(
+                                '${value.toInt()}%',
+                                style: const TextStyle(fontSize: 10),
+                              );
+                            },
+                          ),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      lineBarsData: [
+                        // Asistencia
+                        LineChartBarData(
+                          spots: trends
+                              .asMap()
+                              .entries
+                              .map(
+                                (e) => FlSpot(
+                                  e.key.toDouble(),
+                                  e.value.attendanceRate,
+                                ),
+                              )
+                              .toList(),
+                          isCurved: true,
+                          color: Colors.blue,
+                          barWidth: 3,
+                          dotData: const FlDotData(show: true),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: Colors.blue.withValues(alpha: 0.1),
+                          ),
+                        ),
+                        // Puntualidad
+                        LineChartBarData(
+                          spots: trends
+                              .asMap()
+                              .entries
+                              .map(
+                                (e) => FlSpot(
+                                  e.key.toDouble(),
+                                  e.value.punctualityRate,
+                                ),
+                              )
+                              .toList(),
+                          isCurved: true,
+                          color: Colors.green,
+                          barWidth: 3,
+                          dotData: const FlDotData(show: true),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: Colors.green.withValues(alpha: 0.1),
+                          ),
+                        ),
+                      ],
+                      minY: 0,
+                      maxY: 100,
                     ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red[300],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Error al cargar tendencia',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
+                    ],
                   ),
-                  borderData: FlBorderData(show: false),
-                  lineBarsData: [
-                    // Asistencia
-                    LineChartBarData(
-                      spots: const [
-                        FlSpot(0, 92),
-                        FlSpot(1, 93),
-                        FlSpot(2, 91),
-                        FlSpot(3, 94),
-                        FlSpot(4, 95),
-                        FlSpot(5, 96),
-                      ],
-                      isCurved: true,
-                      color: Colors.blue,
-                      barWidth: 3,
-                      dotData: const FlDotData(show: true),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: Colors.blue.withValues(alpha: 0.1),
-                      ),
-                    ),
-                    // Puntualidad
-                    LineChartBarData(
-                      spots: const [
-                        FlSpot(0, 85),
-                        FlSpot(1, 86),
-                        FlSpot(2, 84),
-                        FlSpot(3, 88),
-                        FlSpot(4, 89),
-                        FlSpot(5, 90),
-                      ],
-                      isCurved: true,
-                      color: Colors.green,
-                      barWidth: 3,
-                      dotData: const FlDotData(show: true),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: Colors.green.withValues(alpha: 0.1),
-                      ),
-                    ),
-                  ],
-                  minY: 80,
-                  maxY: 100,
                 ),
               ),
             ),
@@ -486,6 +593,8 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
   }
 
   Widget _buildPerformanceDistribution() {
+    final distributionAsync = ref.watch(performanceDistributionProvider);
+
     return Card(
       elevation: 2,
       child: Padding(
@@ -500,72 +609,121 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
             const SizedBox(height: 20),
             SizedBox(
               height: 200,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: PieChart(
-                      PieChartData(
-                        sectionsSpace: 2,
-                        centerSpaceRadius: 50,
-                        sections: [
-                          PieChartSectionData(
-                            value: 65,
-                            title: '65',
-                            color: Colors.green,
-                            radius: 60,
-                            titleStyle: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+              child: distributionAsync.when(
+                data: (distribution) {
+                  if (distribution.total == 0) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.pie_chart_outline,
+                            size: 48,
+                            color: Colors.grey[400],
                           ),
-                          PieChartSectionData(
-                            value: 25,
-                            title: '25',
-                            color: Colors.amber,
-                            radius: 55,
-                            titleStyle: const TextStyle(
+                          const SizedBox(height: 12),
+                          Text(
+                            'No hay datos de desempeño disponibles',
+                            style: TextStyle(
+                              color: Colors.grey[600],
                               fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          PieChartSectionData(
-                            value: 10,
-                            title: '10',
-                            color: Colors.orange,
-                            radius: 50,
-                            titleStyle: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    );
+                  }
+
+                  return Row(
                     children: [
-                      _buildPerformanceLabel(
-                        'Excelente (90-100)',
-                        Colors.green,
-                        65,
+                      Expanded(
+                        child: PieChart(
+                          PieChartData(
+                            sectionsSpace: 2,
+                            centerSpaceRadius: 50,
+                            sections: [
+                              PieChartSectionData(
+                                value: distribution.excellent.toDouble(),
+                                title: '${distribution.excellent}',
+                                color: Colors.green,
+                                radius: 60,
+                                titleStyle: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              PieChartSectionData(
+                                value: distribution.good.toDouble(),
+                                title: '${distribution.good}',
+                                color: Colors.amber,
+                                radius: 55,
+                                titleStyle: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              PieChartSectionData(
+                                value: distribution.needsImprovement.toDouble(),
+                                title: '${distribution.needsImprovement}',
+                                color: Colors.orange,
+                                radius: 50,
+                                titleStyle: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildPerformanceLabel(
+                            'Excelente (90-100)',
+                            Colors.green,
+                            distribution.excellent,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildPerformanceLabel(
+                            'Bueno (70-89)',
+                            Colors.amber,
+                            distribution.good,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildPerformanceLabel(
+                            'Mejorar (<70)',
+                            Colors.orange,
+                            distribution.needsImprovement,
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red[300],
                       ),
                       const SizedBox(height: 12),
-                      _buildPerformanceLabel('Bueno (70-89)', Colors.amber, 25),
-                      const SizedBox(height: 12),
-                      _buildPerformanceLabel(
-                        'Mejorar (<70)',
-                        Colors.orange,
-                        10,
+                      Text(
+                        'Error al cargar distribución',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ],
@@ -601,12 +759,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
   }
 
   Widget _buildSupervisorsSection() {
-    // Mock data
-    final supervisors = [
-      {'name': 'Carlos Ruiz', 'team': 18, 'avgScore': 88.5},
-      {'name': 'Ana García', 'team': 22, 'avgScore': 91.2},
-      {'name': 'Luis Torres', 'team': 15, 'avgScore': 85.3},
-    ];
+    final supervisorsAsync = ref.watch(supervisorsPerformanceProvider);
 
     return Card(
       elevation: 2,
@@ -624,7 +777,6 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                 ),
                 TextButton(
                   onPressed: () {
-                    // Navegar a Users page con filtro de supervisores
                     Navigator.pushNamed(context, '/users');
                   },
                   child: const Text('Ver todos'),
@@ -632,40 +784,98 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
               ],
             ),
             const SizedBox(height: 12),
-            ...supervisors.map((supervisor) {
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                color: Colors.grey[50],
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.blue,
-                    child: Text(
-                      supervisor['name'].toString()[0],
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  title: Text(supervisor['name'].toString()),
-                  subtitle: Text('${supervisor['team']} personas en equipo'),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${supervisor['avgScore']}',
-                      style: const TextStyle(
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
+            supervisorsAsync.when(
+              data: (supervisors) {
+                if (supervisors.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.people_outline,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No hay supervisores registrados',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                  );
+                }
+
+                return Column(
+                  children: supervisors.map((supervisor) {
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      color: Colors.grey[50],
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.blue,
+                          child: Text(
+                            supervisor.name[0].toUpperCase(),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                        title: Text(supervisor.name),
+                        subtitle: Text(
+                          '${supervisor.teamSize} personas en equipo',
+                        ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            supervisor.avgScore.toStringAsFixed(1),
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (error, stack) => Padding(
+                padding: const EdgeInsets.all(20),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red[300],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Error al cargar supervisores',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
+                    ],
                   ),
                 ),
-              );
-            }),
+              ),
+            ),
           ],
         ),
       ),
@@ -673,6 +883,8 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
   }
 
   Widget _buildTopSupervisorsList() {
+    final departmentsAsync = ref.watch(departmentComparisonProvider);
+
     return Card(
       elevation: 2,
       child: Padding(
@@ -685,10 +897,80 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            _buildDepartmentBar('Ventas', 92, Colors.blue),
-            _buildDepartmentBar('Operaciones', 88, Colors.green),
-            _buildDepartmentBar('Logística', 85, Colors.orange),
-            _buildDepartmentBar('Administración', 90, Colors.purple),
+            departmentsAsync.when(
+              data: (departments) {
+                if (departments.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.business_outlined,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No hay datos de áreas disponibles',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final colors = [
+                  Colors.blue,
+                  Colors.green,
+                  Colors.orange,
+                  Colors.purple,
+                  Colors.teal,
+                  Colors.pink,
+                ];
+
+                return Column(
+                  children: departments.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final dept = entry.value;
+                    return _buildDepartmentBar(
+                      dept.department,
+                      dept.score,
+                      colors[index % colors.length],
+                    );
+                  }).toList(),
+                );
+              },
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (error, stack) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red[300],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Error al cargar comparativa',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -737,95 +1019,236 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
   }
 
   Widget _buildCriticalAlerts() {
-    final alerts = [
-      {
-        'title': 'Ausentismo alto en Logística',
-        'description': '15% más que el promedio',
-        'severity': 'high',
-      },
-      {
-        'title': 'Patrón de retrasos en Ventas',
-        'description': 'Martes y jueves críticos',
-        'severity': 'medium',
-      },
-    ];
+    final alertsAsync = ref.watch(criticalAlertsProvider);
 
-    if (alerts.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    return alertsAsync.when(
+      data: (alerts) {
+        if (alerts.isEmpty) {
+          return Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 48,
+                    color: Colors.green[400],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No hay alertas críticas',
+                    style: TextStyle(
+                      color: Colors.green[700],
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '¡Todo está funcionando correctamente!',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
 
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        return Card(
+          elevation: 2,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.priority_high, color: Colors.red[700]),
-                const SizedBox(width: 8),
-                const Text(
-                  'Alertas Críticas',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Icon(Icons.priority_high, color: Colors.red[700]),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Alertas Críticas',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 12),
+                ...alerts.map((alert) {
+                  final color = alert.severity == AlertSeverity.high
+                      ? Colors.red
+                      : Colors.orange;
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    color: color.withValues(alpha: 0.05),
+                    child: ListTile(
+                      leading: Icon(Icons.warning, color: color),
+                      title: Text(alert.title),
+                      subtitle: Text(alert.description),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.arrow_forward),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text(alert.title),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(alert.description),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Tipo: ${alert.severity.name}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: color,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cerrar'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                }),
               ],
             ),
-            const SizedBox(height: 12),
-            ...alerts.map((alert) {
-              final color = alert['severity'] == 'high'
-                  ? Colors.red
-                  : Colors.orange;
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                color: color.withValues(alpha: 0.05),
-                child: ListTile(
-                  leading: Icon(Icons.warning, color: color),
-                  title: Text(alert['title'].toString()),
-                  subtitle: Text(alert['description'].toString()),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.arrow_forward),
-                    onPressed: () {
-                      // Mostrar diálogo con detalles de la alerta
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: Text(alert['title'].toString()),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(alert['description'].toString()),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Tipo: ${alert['severity']}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: color,
-                                ),
-                              ),
-                            ],
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cerrar'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              );
-            }),
-          ],
+          ),
+        );
+      },
+      loading: () => Card(
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 12),
+              Text(
+                'Verificando alertas...',
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      ),
+      error: (error, stack) => Card(
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+              const SizedBox(height: 12),
+              Text(
+                'Error al cargar alertas',
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   /// Generate attendance predictions using AI
+  String _generatePredictionFromKPIs({
+    required int totalCheckIns,
+    required int lateCheckIns,
+    required double punctualityRate,
+    required double avgScore,
+  }) {
+    final StringBuffer prediction = StringBuffer();
+
+    prediction.writeln('📊 **Análisis de Asistencia**\n');
+
+    // Análisis de puntualidad
+    if (punctualityRate >= 90) {
+      prediction.writeln(
+        '✅ **Excelente puntualidad** (${punctualityRate.toStringAsFixed(1)}%)',
+      );
+      prediction.writeln('El equipo mantiene un alto nivel de puntualidad.\n');
+    } else if (punctualityRate >= 70) {
+      prediction.writeln(
+        '⚠️ **Puntualidad aceptable** (${punctualityRate.toStringAsFixed(1)}%)',
+      );
+      prediction.writeln(
+        'Hay margen de mejora. Considera recordatorios automáticos.\n',
+      );
+    } else {
+      prediction.writeln(
+        '🚨 **Alerta de puntualidad** (${punctualityRate.toStringAsFixed(1)}%)',
+      );
+      prediction.writeln(
+        'Requiere atención inmediata. Revisa políticas y comunicación.\n',
+      );
+    }
+
+    // Análisis de llegadas tardías
+    final latePercentage = totalCheckIns > 0
+        ? (lateCheckIns / totalCheckIns * 100)
+        : 0.0;
+    if (latePercentage > 20) {
+      prediction.writeln(
+        '📉 **Alto índice de retrasos** (${latePercentage.toStringAsFixed(1)}%)',
+      );
+      prediction.writeln(
+        'Sugerencia: Analizar causas comunes (transporte, horarios).\n',
+      );
+    } else if (latePercentage > 10) {
+      prediction.writeln(
+        '📊 Retrasos moderados (${latePercentage.toStringAsFixed(1)}%)',
+      );
+      prediction.writeln('Monitorear tendencia en próximas semanas.\n');
+    }
+
+    // Análisis de desempeño general
+    if (avgScore >= 4.0) {
+      prediction.writeln(
+        '⭐ **Desempeño sobresaliente** (${avgScore.toStringAsFixed(1)}/5.0)',
+      );
+    } else if (avgScore >= 3.0) {
+      prediction.writeln(
+        '✔️ Desempeño adecuado (${avgScore.toStringAsFixed(1)}/5.0)',
+      );
+    } else if (avgScore > 0) {
+      prediction.writeln(
+        '⚠️ Desempeño bajo (${avgScore.toStringAsFixed(1)}/5.0)',
+      );
+      prediction.writeln('Considera planes de mejora individualizados.');
+    }
+
+    // Recomendaciones generales
+    prediction.writeln('\n💡 **Recomendaciones:**');
+    if (punctualityRate < 85) {
+      prediction.writeln(
+        '• Implementar sistema de notificaciones previas al turno',
+      );
+    }
+    if (latePercentage > 15) {
+      prediction.writeln(
+        '• Revisar y ajustar horarios según necesidades del equipo',
+      );
+    }
+    prediction.writeln('• Mantener comunicación constante con supervisores');
+    prediction.writeln(
+      '• Reconocer y recompensar buenos hábitos de asistencia',
+    );
+
+    return prediction.toString();
+  }
+
   Future<void> _generateAttendancePredictions() async {
     // Show loading dialog immediately
     if (!mounted) return;
@@ -850,56 +1273,108 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     );
 
     try {
-      // Get recent attendance data from provider
-      final recentAttendance = await ref.read(
-        recentOrganizationAttendanceProvider.future,
-      );
+      // Obtener KPIs para generar predicción basada en datos reales
+      final dateRange = DateRange.lastWeek();
+      final kpis = await ref.read(organizationKPIsProvider(dateRange).future);
 
-      final predictions = await ref
-          .read(aiCoachingProvider.notifier)
-          .predictAttendanceIssues(
-            recentAttendance: recentAttendance,
-            language: 'es',
-          );
+      final totalCheckIns = kpis['total_check_ins'] as int? ?? 0;
+      final lateCheckIns = kpis['late_check_ins'] as int? ?? 0;
+      final punctualityRate =
+          (kpis['punctuality_rate'] as num?)?.toDouble() ?? 0.0;
+      final avgScore =
+          (kpis['avg_attendance_score'] as num?)?.toDouble() ?? 0.0;
 
       if (!mounted) return;
       Navigator.pop(context); // Close loading dialog
 
-      if (predictions != null) {
-        // Show predictions dialog
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.psychology, color: Colors.purple),
-                SizedBox(width: 8),
-                Text('Predicciones IA'),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Text(
-                predictions,
-                style: const TextStyle(fontSize: 15, height: 1.5),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cerrar'),
-              ),
+      // Generar predicción simple basada en los KPIs
+      final prediction = _generatePredictionFromKPIs(
+        totalCheckIns: totalCheckIns,
+        lateCheckIns: lateCheckIns,
+        punctualityRate: punctualityRate,
+        avgScore: avgScore,
+      );
+
+      // Show predictions dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.psychology, color: Colors.purple),
+              SizedBox(width: 8),
+              Text('Predicciones IA'),
             ],
           ),
-        );
-      }
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  prediction,
+                  style: const TextStyle(fontSize: 15, height: 1.5),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Análisis basado en datos de la última semana',
+                          style: TextStyle(fontSize: 12, color: Colors.blue),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context); // Close loading dialog
 
+      // Mostrar error detallado
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error al generar predicciones: $e'),
+          content: Text('Error: ${e.toString()}'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Ver',
+            textColor: Colors.white,
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Error Detallado'),
+                  content: SingleChildScrollView(child: Text(e.toString())),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cerrar'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       );
     }

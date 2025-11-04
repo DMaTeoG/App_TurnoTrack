@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/locale_provider.dart';
 import '../providers/notifications_settings_provider.dart';
+import '../pages/profile/profile_edit_page.dart';
+import '../pages/attendance/attendance_history_page.dart';
 
 /// Pantalla de ajustes de la aplicación
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -13,56 +16,87 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  String _selectedLanguage = 'es';
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final themeMode = ref.watch(themeModeProvider);
+
+    // ✅ ACTUALIZADO: Watch AsyncValue del tema
+    final themeModeAsync = ref.watch(themeModeProvider);
+
+    // ✅ ACTUALIZADO: Watch AsyncValue del idioma
+    final localeAsync = ref.watch(localeProvider);
+
     final notificationsEnabled = ref.watch(notificationsEnabledProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Ajustes'), elevation: 0),
-      body: ListView(
-        children: [
-          // Apariencia
-          _buildSection(
-            context,
-            icon: Icons.palette,
-            title: 'Apariencia',
-            children: [_buildThemeSwitch(theme, themeMode)],
-          ),
+      body: themeModeAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text('Error: $error')),
+        data: (themeMode) {
+          return localeAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => Center(child: Text('Error: $error')),
+            data: (locale) {
+              return ListView(
+                children: [
+                  // ✅ NUEVO: Perfil
+                  _buildSection(
+                    context,
+                    icon: Icons.person,
+                    title: 'Perfil',
+                    children: [
+                      _buildProfileButton(theme),
+                      _buildAttendanceHistoryButton(theme),
+                    ],
+                  ),
 
-          const Divider(height: 1),
+                  const Divider(height: 1),
 
-          // Notificaciones
-          _buildSection(
-            context,
-            icon: Icons.notifications,
-            title: 'Notificaciones',
-            children: [_buildNotificationsSwitch(theme, notificationsEnabled)],
-          ),
+                  // Apariencia
+                  _buildSection(
+                    context,
+                    icon: Icons.palette,
+                    title: 'Apariencia',
+                    children: [_buildThemeSwitch(theme, themeMode)],
+                  ),
 
-          const Divider(height: 1),
+                  const Divider(height: 1),
 
-          // Idioma
-          _buildSection(
-            context,
-            icon: Icons.language,
-            title: 'Idioma',
-            children: [_buildLanguageSelector(theme)],
-          ),
+                  // Notificaciones
+                  _buildSection(
+                    context,
+                    icon: Icons.notifications,
+                    title: 'Notificaciones',
+                    children: [
+                      _buildNotificationsSwitch(theme, notificationsEnabled),
+                    ],
+                  ),
 
-          const Divider(height: 1),
+                  const Divider(height: 1),
 
-          // Sesión
-          _buildSection(
-            context,
-            icon: Icons.logout,
-            title: 'Sesión',
-            children: [_buildLogoutButton(theme)],
-          ),
-        ],
+                  // Idioma
+                  _buildSection(
+                    context,
+                    icon: Icons.language,
+                    title: 'Idioma',
+                    children: [_buildLanguageSelector(theme, locale)],
+                  ),
+
+                  const Divider(height: 1),
+
+                  // Sesión
+                  _buildSection(
+                    context,
+                    icon: Icons.logout,
+                    title: 'Sesión',
+                    children: [_buildLogoutButton(theme)],
+                  ),
+                ],
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -143,7 +177,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildLanguageSelector(ThemeData theme) {
+  Widget _buildLanguageSelector(ThemeData theme, Locale currentLocale) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: SegmentedButton<String>(
@@ -159,24 +193,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             icon: Icon(Icons.language),
           ),
         ],
-        selected: {_selectedLanguage},
+        selected: {currentLocale.languageCode},
         onSelectionChanged: (Set<String> newSelection) {
           final value = newSelection.first;
-          setState(() => _selectedLanguage = value);
-          // El idioma se gestiona con flutter_localizations (ya configurado)
-          // Los archivos .arb en assets/i18n/ contienen las traducciones
+
+          // ✅ Actualizar idioma usando LocaleProvider
+          ref.read(localeProvider.notifier).setLocale(Locale(value));
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
                 value == 'es'
-                    ? 'Idioma: Español (ya configurado en la app)'
-                    : 'Language: English (already configured)',
+                    ? 'Idioma cambiado a Español'
+                    : 'Language changed to English',
               ),
               backgroundColor: Colors.green,
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildProfileButton(ThemeData theme) {
+    return ListTile(
+      leading: const Icon(Icons.edit),
+      title: const Text('Editar Perfil'),
+      subtitle: const Text('Cambiar foto, nombre y teléfono'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () {
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const ProfileEditPage()));
+      },
+    );
+  }
+
+  Widget _buildAttendanceHistoryButton(ThemeData theme) {
+    return ListTile(
+      leading: const Icon(Icons.history),
+      title: const Text('Historial de Asistencias'),
+      subtitle: const Text('Ver registros con fotos y ubicaciones'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AttendanceHistoryPage()),
+        );
+      },
     );
   }
 

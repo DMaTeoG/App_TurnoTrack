@@ -258,6 +258,86 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =============================================
+-- Función para obtener KPIs organizacionales (Managers)
+-- =============================================
+CREATE OR REPLACE FUNCTION get_organization_kpis(
+  start_date TIMESTAMP WITH TIME ZONE,
+  end_date TIMESTAMP WITH TIME ZONE
+)
+RETURNS JSON AS $$
+DECLARE
+  result JSON;
+  total_employees INT;
+  active_employees INT;
+  total_check_ins INT;
+  on_time_check_ins INT;
+  late_check_ins INT;
+  punctuality_rate DECIMAL(5,2);
+  avg_attendance_score DECIMAL(5,2);
+  total_sales_amount DECIMAL(12,2);
+BEGIN
+  -- Verificar que el usuario sea manager
+  IF NOT is_manager() THEN
+    RAISE EXCEPTION 'Solo managers pueden acceder a KPIs organizacionales';
+  END IF;
+
+  -- Calcular métricas de empleados
+  SELECT 
+    COUNT(DISTINCT id),
+    COUNT(DISTINCT id) FILTER (WHERE is_active = true)
+  INTO total_employees, active_employees
+  FROM users
+  WHERE role IN ('worker', 'supervisor');
+
+  -- Calcular métricas de asistencia
+  SELECT 
+    COUNT(a.id),
+    COUNT(a.id) FILTER (WHERE a.is_late = false),
+    COUNT(a.id) FILTER (WHERE a.is_late = true)
+  INTO total_check_ins, on_time_check_ins, late_check_ins
+  FROM attendance a
+  WHERE a.check_in_time BETWEEN start_date AND end_date;
+
+  -- Calcular tasa de puntualidad
+  IF total_check_ins > 0 THEN
+    punctuality_rate := ROUND((on_time_check_ins::DECIMAL / total_check_ins * 100), 2);
+  ELSE
+    punctuality_rate := 0;
+  END IF;
+
+  -- Calcular promedio de score de asistencia
+  SELECT ROUND(COALESCE(AVG(pm.attendance_score), 0), 2)
+  INTO avg_attendance_score
+  FROM performance_metrics pm
+  WHERE pm.period_start >= start_date::DATE 
+    AND pm.period_end <= end_date::DATE;
+
+  -- Calcular ventas totales
+  SELECT COALESCE(SUM(s.amount), 0)
+  INTO total_sales_amount
+  FROM sales s
+  WHERE s.date BETWEEN start_date::DATE AND end_date::DATE;
+
+  -- Construir JSON con todos los KPIs
+  result := json_build_object(
+    'total_employees', total_employees,
+    'active_employees', active_employees,
+    'total_check_ins', total_check_ins,
+    'on_time_check_ins', on_time_check_ins,
+    'late_check_ins', late_check_ins,
+    'punctuality_rate', punctuality_rate,
+    'avg_attendance_score', avg_attendance_score,
+    'total_sales', total_sales_amount,
+    'period_start', start_date,
+    'period_end', end_date,
+    'generated_at', NOW()
+  );
+
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =============================================
 -- STEP 5: TRIGGERS
 -- =============================================
 
@@ -286,12 +366,10 @@ CREATE TRIGGER audit_users_trigger
 -- STEP 6: HABILITAR ROW LEVEL SECURITY
 -- =============================================
 -- 
--- ⚠️ NOTA: RLS temporalmente deshabilitado en 'users' por conflictos de políticas
--- TODO: Re-habilitar con políticas corregidas en producción
---
--- ALTER TABLE users ENABLE ROW LEVEL SECURITY;  -- DESHABILITADO TEMPORALMENTE
+-- ✅ ACTUALIZADO: RLS habilitado con políticas sin recursión
+-- Fecha: 3 de noviembre, 2025
 
-ALTER TABLE users DISABLE ROW LEVEL SECURITY;  -- ⚠️ TEMPORAL - Corregir políticas antes de producción
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;  -- ✅ HABILITADO
 ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE performance_metrics ENABLE ROW LEVEL SECURITY;
@@ -300,8 +378,10 @@ ALTER TABLE rate_limit_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
 -- =============================================
--- STEP 7: POLÍTICAS RLS PARA USERS
+-- STEP 7: POLÍTICAS RLS PARA USERS (SIN RECURSIÓN)
 -- =============================================
+-- ✅ ACTUALIZADO: Políticas optimizadas usando funciones SECURITY DEFINER
+-- para evitar recursión infinita
 
 -- Limpiar políticas existentes
 DROP POLICY IF EXISTS "workers_read_own_profile" ON users;
@@ -312,76 +392,101 @@ DROP POLICY IF EXISTS "supervisors_create_workers" ON users;
 DROP POLICY IF EXISTS "managers_read_all" ON users;
 DROP POLICY IF EXISTS "managers_create_users" ON users;
 DROP POLICY IF EXISTS "managers_update_users" ON users;
+DROP POLICY IF EXISTS "managers_delete_users" ON users;
 
--- Workers: Solo pueden ver su propia información
+-- =============================================
+-- POLÍTICAS DE LECTURA (SELECT)
+-- =============================================
+
+-- Workers: Solo pueden ver su propio perfil
 CREATE POLICY "workers_read_own_profile"
 ON users FOR SELECT
-USING (auth.uid() = id AND role = 'worker');
+USING (auth.uid() = id);
 
--- Workers: Pueden actualizar su propia información (excepto rol y supervisor)
-CREATE POLICY "workers_update_own_profile"
-ON users FOR UPDATE
-USING (auth.uid() = id AND role = 'worker')
-WITH CHECK (
-  auth.uid() = id 
-  AND role = 'worker'
-  AND supervisor_id = (SELECT supervisor_id FROM users WHERE id = auth.uid())
-);
-
--- Supervisors: Pueden ver workers bajo su supervisión + su propio perfil
+-- Supervisors: Ver su perfil + workers bajo su supervisión
 CREATE POLICY "supervisors_read_team"
 ON users FOR SELECT
 USING (
-  auth.uid() IN (SELECT id FROM users WHERE role IN ('supervisor', 'manager'))
+  is_supervisor()
   AND (
-    id = auth.uid()
-    OR supervisor_id = auth.uid()
-    OR role = 'worker'
+    auth.uid() = id  -- Ver su propio perfil
+    OR (supervisor_id = auth.uid() AND role = 'worker')  -- Ver sus workers
   )
 );
 
--- Supervisors: Pueden actualizar workers bajo su supervisión
+-- Managers: Ver todos los usuarios
+CREATE POLICY "managers_read_all"
+ON users FOR SELECT
+USING (is_manager());
+
+-- =============================================
+-- POLÍTICAS DE ACTUALIZACIÓN (UPDATE)
+-- =============================================
+
+-- Workers: Actualizar solo su propio perfil (no pueden cambiar role ni supervisor_id)
+CREATE POLICY "workers_update_own_profile"
+ON users FOR UPDATE
+USING (auth.uid() = id)
+WITH CHECK (
+  auth.uid() = id
+  AND role = (SELECT role FROM users WHERE id = auth.uid())  -- Role no cambia
+  AND supervisor_id = (SELECT supervisor_id FROM users WHERE id = auth.uid())  -- Supervisor no cambia
+);
+
+-- Supervisors: Actualizar workers bajo su supervisión
 CREATE POLICY "supervisors_update_team"
 ON users FOR UPDATE
 USING (
-  auth.uid() IN (SELECT id FROM users WHERE role IN ('supervisor', 'manager'))
+  is_supervisor()
   AND supervisor_id = auth.uid()
+  AND role = 'worker'
 )
 WITH CHECK (
   supervisor_id = auth.uid()
   AND role = 'worker'
 );
 
--- Supervisors: Pueden crear nuevos workers
+-- Managers: Actualizar cualquier usuario excepto otros managers
+CREATE POLICY "managers_update_users"
+ON users FOR UPDATE
+USING (
+  is_manager()
+  AND role != 'manager'
+)
+WITH CHECK (role != 'manager');
+
+-- =============================================
+-- POLÍTICAS DE INSERCIÓN (INSERT)
+-- =============================================
+
+-- Supervisors: Crear workers bajo su supervisión
 CREATE POLICY "supervisors_create_workers"
 ON users FOR INSERT
 WITH CHECK (
-  auth.uid() IN (SELECT id FROM users WHERE role IN ('supervisor', 'manager'))
+  is_supervisor()
   AND role = 'worker'
   AND supervisor_id = auth.uid()
 );
 
--- Managers: Acceso total de lectura
-CREATE POLICY "managers_read_all"
-ON users FOR SELECT
-USING (auth.uid() IN (SELECT id FROM users WHERE role = 'manager'));
-
--- Managers: Pueden crear supervisores y workers
+-- Managers: Crear supervisores y workers
 CREATE POLICY "managers_create_users"
 ON users FOR INSERT
 WITH CHECK (
-  auth.uid() IN (SELECT id FROM users WHERE role = 'manager')
+  is_manager()
   AND role IN ('worker', 'supervisor')
 );
 
--- Managers: Pueden actualizar cualquier usuario (excepto otros managers)
-CREATE POLICY "managers_update_users"
-ON users FOR UPDATE
+-- =============================================
+-- POLÍTICAS DE ELIMINACIÓN (DELETE)
+-- =============================================
+
+-- Managers: Eliminar cualquier usuario excepto otros managers
+CREATE POLICY "managers_delete_users"
+ON users FOR DELETE
 USING (
-  auth.uid() IN (SELECT id FROM users WHERE role = 'manager')
+  is_manager()
   AND role != 'manager'
-)
-WITH CHECK (role != 'manager');
+);
 
 -- =============================================
 -- STEP 8: POLÍTICAS RLS PARA ATTENDANCE
@@ -557,13 +662,44 @@ CREATE POLICY "Users can view attendance photos"
     USING (bucket_id = 'attendance-photos');
 
 -- Storage policies para profile photos
+-- Managers y supervisors pueden subir fotos de cualquier usuario
 DROP POLICY IF EXISTS "Users can upload their profile photos" ON storage.objects;
 CREATE POLICY "Users can upload their profile photos"
     ON storage.objects FOR INSERT
     TO authenticated
     WITH CHECK (
       bucket_id = 'profile-photos'
-      AND auth.uid()::text = split_part(name, '/', 1)
+      AND (
+        -- Usuarios pueden subir su propia foto
+        auth.uid()::text = split_part(name, '/', 1)
+        OR
+        -- Managers y supervisors pueden subir fotos de cualquier usuario
+        EXISTS (
+          SELECT 1 FROM users
+          WHERE id = auth.uid()
+          AND role IN ('manager', 'supervisor')
+        )
+      )
+    );
+
+-- Managers y supervisors pueden actualizar fotos de cualquier usuario
+DROP POLICY IF EXISTS "Users can update their profile photos" ON storage.objects;
+CREATE POLICY "Users can update their profile photos"
+    ON storage.objects FOR UPDATE
+    TO authenticated
+    USING (
+      bucket_id = 'profile-photos'
+      AND (
+        -- Usuarios pueden actualizar su propia foto
+        auth.uid()::text = split_part(name, '/', 1)
+        OR
+        -- Managers y supervisors pueden actualizar fotos de cualquier usuario
+        EXISTS (
+          SELECT 1 FROM users
+          WHERE id = auth.uid()
+          AND role IN ('manager', 'supervisor')
+        )
+      )
     );
 
 DROP POLICY IF EXISTS "Users can view profile photos" ON storage.objects;
@@ -571,6 +707,26 @@ CREATE POLICY "Users can view profile photos"
     ON storage.objects FOR SELECT
     TO authenticated
     USING (bucket_id = 'profile-photos');
+
+-- Managers pueden eliminar fotos de cualquier usuario
+DROP POLICY IF EXISTS "Users can delete their profile photos" ON storage.objects;
+CREATE POLICY "Users can delete their profile photos"
+    ON storage.objects FOR DELETE
+    TO authenticated
+    USING (
+      bucket_id = 'profile-photos'
+      AND (
+        -- Usuarios pueden eliminar su propia foto
+        auth.uid()::text = split_part(name, '/', 1)
+        OR
+        -- Managers pueden eliminar fotos de cualquier usuario
+        EXISTS (
+          SELECT 1 FROM users
+          WHERE id = auth.uid()
+          AND role = 'manager'
+        )
+      )
+    );
 
 -- =============================================
 -- ✅ SCHEMA CONSOLIDADO COMPLETO
