@@ -115,7 +115,7 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
     if (_capturedImage == null || _latitude == null || _longitude == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Missing photo or location data'),
+          content: Text('Faltan datos de foto o ubicación'),
           backgroundColor: Colors.red,
         ),
       );
@@ -130,7 +130,7 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
         _capturedImage!,
       );
 
-      // Submit check-in via attendance provider
+      // Submit check-in (sistema simple: solo entradas)
       await ref
           .read(attendanceProvider.notifier)
           .checkIn(
@@ -144,7 +144,7 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✓ Check-in registered successfully'),
+            content: Text('✓ Entrada registrada exitosamente'),
             backgroundColor: Colors.green,
           ),
         );
@@ -154,7 +154,7 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
         setState(() => _isProcessing = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error registering check-in: $e'),
+            content: Text('Error al registrar entrada: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -417,7 +417,7 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
           const Icon(Icons.check_circle_outline, size: 48, color: Colors.green),
           const SizedBox(height: 12),
           Text(
-            '¿Confirmar registro?',
+            '¿Confirmar entrada?',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),

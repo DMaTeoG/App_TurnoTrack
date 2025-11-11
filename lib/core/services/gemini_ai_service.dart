@@ -42,12 +42,16 @@ class GeminiAIService {
   }
 
   /// Generate personalized coaching advice based on performance metrics
+  /// [coachingType]: 'competitive' for ranking/comparison focus, 'motivational' for personal growth
   Future<String> generateCoachingAdvice({
     required UserModel user,
     required PerformanceMetrics metrics,
     required String language,
+    String coachingType = 'competitive', // 'competitive' or 'motivational'
   }) async {
-    final prompt = _buildCoachingPrompt(user, metrics, language);
+    final prompt = coachingType == 'motivational'
+        ? _buildMotivationalPrompt(user, metrics, language)
+        : _buildCoachingPrompt(user, metrics, language);
 
     try {
       final content = [Content.text(prompt)];
@@ -57,6 +61,78 @@ class GeminiAIService {
     } catch (e) {
       throw Exception('Error generating coaching advice: $e');
     }
+  }
+
+  /// Build motivational prompt focused on personal growth (no pressure, no comparison)
+  String _buildMotivationalPrompt(
+    UserModel user,
+    PerformanceMetrics metrics,
+    String language,
+  ) {
+    final isSpanish = language == 'es';
+    final firstName = user.fullName.split(' ').first;
+
+    final systemPrompt = isSpanish
+        ? 'Eres un mentor personal empático y motivador. Tu objetivo es ayudar a $firstName a crecer profesionalmente de forma positiva, sin presión ni comparaciones con otros. Enfócate en su progreso personal y bienestar.'
+        : 'You are an empathetic and motivating personal mentor. Your goal is to help $firstName grow professionally in a positive way, without pressure or comparisons. Focus on personal progress and well-being.';
+
+    final contextPrompt = isSpanish
+        ? '''
+ANÁLISIS PERSONAL - $firstName:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 Tu progreso: ${metrics.attendanceScore}/100 puntos
+📅 Registros este período: ${metrics.totalCheckIns}
+⏰ Llegadas tarde: ${metrics.lateCheckIns}
+💪 Áreas de crecimiento identificadas
+
+TU MISIÓN:
+1. Reconoce lo positivo que ha hecho (aunque sea pequeño)
+2. Da 2-3 consejos SUAVES y prácticos para mejorar SIN presión
+3. Usa un tono amigable, como un amigo que quiere ayudar
+4. NO menciones rankings, comparaciones, ni presiones laborales
+5. Enfócate en HÁBITOS SALUDABLES y crecimiento personal
+6. MÁXIMO 100 palabras - sé cálido y alentador
+7. NO uses markdown, asteriscos, ni negritas - solo texto plano
+
+EJEMPLO DE TONO:
+Hey $firstName! 👋 Veo que has estado registrando tu asistencia constantemente, eso habla de tu compromiso. 
+
+Para que tu día sea más tranquilo, podrías:
+1. Prepara tu ropa y cosas la noche anterior
+2. Pon tu alarma 15 minutos antes (te sorprenderá la diferencia)
+3. Escucha música motivadora en la mañana
+
+Recuerda, cada pequeño paso cuenta. ¡Vas muy bien! 🌟
+'''
+        : '''
+PERSONAL ANALYSIS - $firstName:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 Your progress: ${metrics.attendanceScore}/100 points
+📅 Records this period: ${metrics.totalCheckIns}
+⏰ Late arrivals: ${metrics.lateCheckIns}
+💪 Growth areas identified
+
+YOUR MISSION:
+1. Recognize the positive they've done (even if small)
+2. Give 2-3 GENTLE and practical tips to improve WITHOUT pressure
+3. Use a friendly tone, like a friend who wants to help
+4. DON'T mention rankings, comparisons, or work pressure
+5. Focus on HEALTHY HABITS and personal growth
+6. MAX 100 words - be warm and encouraging
+7. NO markdown, asterisks, or bold - plain text only
+
+TONE EXAMPLE:
+Hey $firstName! 👋 I see you've been consistently checking in, that shows your commitment.
+
+To make your day smoother:
+1. Prepare your clothes and things the night before
+2. Set your alarm 15 minutes earlier (you'll be surprised)
+3. Listen to motivating music in the morning
+
+Remember, every small step counts. You're doing great! 🌟
+''';
+
+    return '$systemPrompt\n\n$contextPrompt';
   }
 
   /// Build coaching prompt based on user context
@@ -73,57 +149,60 @@ class GeminiAIService {
         : '0.0';
 
     final systemPrompt = isSpanish
-        ? 'Eres un coach laboral experto en México/Latinoamérica con 15 años de experiencia. Tu misión es ayudar a trabajadores a mejorar su puntualidad y desempeño con consejos prácticos y motivadores.'
-        : 'You are an expert workplace coach with 15 years of experience. Your mission is to help workers improve their punctuality and performance with practical, motivating advice.';
+        ? 'Eres un coach de alto rendimiento especializado en análisis competitivo. Tu objetivo es ayudar a ${user.fullName} a alcanzar el TOP 1 del ranking. Sé directo, analítico y enfócate en comparaciones con el resto del equipo. Identifica puntos débiles claramente y da estrategias concretas para superarlos.'
+        : 'You are a high-performance coach specialized in competitive analysis. Your goal is to help ${user.fullName} reach TOP 1 in the ranking. Be direct, analytical, and focus on comparisons with the rest of the team. Clearly identify weak points and give concrete strategies to overcome them.';
 
     final contextPrompt = isSpanish
         ? '''
-ANÁLISIS DE DESEMPEÑO - ${user.fullName} (${user.role}):
+ANÁLISIS COMPETITIVO - ${user.fullName}:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 Score General: ${metrics.attendanceScore}/100 puntos
-📅 Período: ${metrics.periodStart.toString().split(' ')[0]} → ${metrics.periodEnd.toString().split(' ')[0]}
-✅ Registros totales: ${metrics.totalCheckIns}
-⚠️ Llegadas tarde: ${metrics.lateCheckIns} ($latePercentage%)
-⏰ Hora promedio entrada: ${metrics.averageCheckInTime.toStringAsFixed(2)}:00
-🏆 Posición ranking: #${metrics.ranking ?? 'Sin posición'}
+🏆 TU POSICIÓN: #${metrics.ranking ?? 'Sin ranking'} 
+📊 Score actual: ${metrics.attendanceScore}/100 puntos
+⚠️ PUNTO DÉBIL: Llegadas tarde: ${metrics.lateCheckIns} ($latePercentage%)
+⏰ Promedio entrada: ${metrics.averageCheckInTime.toStringAsFixed(2)}:00
+✅ Check-ins totales: ${metrics.totalCheckIns}
+🎯 META: Alcanzar TOP 1
 
-INSTRUCCIONES ESPECÍFICAS:
-1. Evalúa el desempeño en 1-2 oraciones (usa emojis si es apropiado)
-2. Da 2-3 consejos ACCIONABLES numerados que el trabajador pueda aplicar HOY
-3. Sé específico con horarios y técnicas concretas
-4. Cierra con una frase motivadora personalizada
-5. MÁXIMO 120 palabras - sé directo y valioso
-6. NO uses markdown, asteriscos, ni negritas - solo texto plano con números
+ANÁLISIS REQUERIDO:
+1. Compara su desempeño con el TOP 1 (sé específico con la brecha)
+2. Identifica EL punto más débil que está impidiendo subir en el ranking
+3. Da 3 acciones CONCRETAS con horarios específicos para mejorar ese punto
+4. Menciona cuántos puestos puede subir si mejora
+5. MÁXIMO 120 palabras - sé directo y analítico
+6. Usa un tono retador pero motivador (tipo "puedes más")
+7. NO uses markdown, asteriscos, ni negritas - solo texto plano
 
-EJEMPLO DE FORMATO:
-Tu score de 78/100 es bueno pero tienes potencial para más. Tus 5 llegadas tarde impactan tu ranking.
+EJEMPLO DE TONO:
+${user.fullName}, estás en posición #5 cuando podrías estar en el TOP 3. Tu principal obstáculo son las 8 llegadas tarde este mes - eso te resta 15 puntos del ranking.
 
-1. Configura alarma 30 min antes de tu hora habitual
-2. Prepara ropa y desayuno la noche anterior  
-3. Usa apps de tráfico para rutas alternas
+PLAN DE ACCIÓN:
+1. Despierta a las 6:30am (no 7:00am) - necesitas ese colchón de tiempo
+2. Sal de casa ANTES de las 7:45am para evitar tráfico pico
+3. Registra entrada ANTES de 8:10am todos los días esta semana
 
-${user.fullName}, con pequeños ajustes puedes estar en el top 10 del próximo mes.
+Si logras 0 llegadas tarde esta semana, subes mínimo 2 posiciones. El TOP 1 está más cerca de lo que crees, solo necesitas consistencia. 💪
 
-GENERA TU RESPUESTA AHORA:'''
+GENERA TU ANÁLISIS:'''
         : '''
-PERFORMANCE ANALYSIS - ${user.fullName} (${user.role}):
+COMPETITIVE ANALYSIS - ${user.fullName}:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 Overall Score: ${metrics.attendanceScore}/100 points
-📅 Period: ${metrics.periodStart.toString().split(' ')[0]} → ${metrics.periodEnd.toString().split(' ')[0]}
+🏆 YOUR POSITION: #${metrics.ranking ?? 'Unranked'}
+📊 Current score: ${metrics.attendanceScore}/100 points
+⚠️ WEAK POINT: Late arrivals: ${metrics.lateCheckIns} ($latePercentage%)
+⏰ Avg entry time: ${metrics.averageCheckInTime.toStringAsFixed(2)}:00
 ✅ Total check-ins: ${metrics.totalCheckIns}
-⚠️ Late arrivals: ${metrics.lateCheckIns} ($latePercentage%)
-⏰ Avg check-in time: ${metrics.averageCheckInTime.toStringAsFixed(2)}:00
-🏆 Ranking position: #${metrics.ranking ?? 'Unranked'}
+🎯 GOAL: Reach TOP 1
 
-SPECIFIC INSTRUCTIONS:
-1. Evaluate performance in 1-2 sentences (use emojis if appropriate)
-2. Provide 2-3 ACTIONABLE numbered tips the worker can apply TODAY
-3. Be specific with schedules and concrete techniques
-4. Close with a personalized motivating phrase
-5. MAX 120 words - be direct and valuable
-6. NO markdown, asterisks, or bold - just plain text with numbers
+REQUIRED ANALYSIS:
+1. Compare performance with TOP 1 (be specific about the gap)
+2. Identify THE weakest point preventing ranking improvement
+3. Give 3 CONCRETE actions with specific times
+4. Mention how many positions can be gained
+5. MAX 120 words - be direct and analytical
+6. Use a challenging but motivating tone
+7. NO markdown, asterisks, or bold - plain text only
 
-GENERATE YOUR RESPONSE NOW:''';
+GENERATE YOUR ANALYSIS NOW:''';
 
     return '$systemPrompt\n\n$contextPrompt';
   }
@@ -230,6 +309,112 @@ GENERATE YOUR ANALYSIS:''';
       return response.text ?? 'No se pudo generar resumen';
     } catch (e) {
       throw Exception('Error generating team summary: $e');
+    }
+  }
+
+  /// Generate strategic insights for managers (organizational level)
+  Future<String> generateManagerInsights({
+    required Map<String, dynamic> organizationKPIs,
+    required String language,
+  }) async {
+    final isSpanish = language == 'es';
+
+    // Extract KPIs
+    final totalCheckIns = organizationKPIs['total_check_ins'] as int? ?? 0;
+    final lateCheckIns = organizationKPIs['late_check_ins'] as int? ?? 0;
+    final punctualityRate =
+        (organizationKPIs['punctuality_rate'] as num?)?.toDouble() ?? 0.0;
+    final avgScore =
+        (organizationKPIs['avg_attendance_score'] as num?)?.toDouble() ?? 0.0;
+    final activeUsers = organizationKPIs['active_users'] as int? ?? 0;
+
+    final latePercentage = totalCheckIns > 0
+        ? (lateCheckIns / totalCheckIns * 100).toStringAsFixed(1)
+        : '0.0';
+
+    final systemPrompt = isSpanish
+        ? 'Eres un consultor estratégico de C-Level con 20 años de experiencia en optimización organizacional y gestión de talento. Tu enfoque es en ROI, eficiencia operacional y cultura organizacional. Das recomendaciones estratégicas basadas en datos para directivos.'
+        : 'You are a C-Level strategic consultant with 20 years of experience in organizational optimization and talent management. Your focus is on ROI, operational efficiency, and organizational culture. You provide data-driven strategic recommendations for executives.';
+
+    final contextPrompt = isSpanish
+        ? '''
+DASHBOARD EJECUTIVO - ANÁLISIS ORGANIZACIONAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 KPIs OPERACIONALES:
+  • Usuarios activos: $activeUsers personas
+  • Registros totales: $totalCheckIns check-ins
+  • Score promedio: ${avgScore.toStringAsFixed(1)}/100 puntos
+  • Tasa puntualidad: ${punctualityRate.toStringAsFixed(1)}%
+  • Llegadas tarde: $lateCheckIns ($latePercentage% del total)
+
+🎯 TU MISIÓN ESTRATÉGICA:
+1. Evalúa la SALUD ORGANIZACIONAL en 2-3 líneas (usa datos duros)
+2. Identifica el MAYOR RIESGO operacional (impacto en productividad/costos)
+3. Da 3 INICIATIVAS ESTRATÉGICAS priorizadas para implementar
+4. Proyecta el IMPACTO esperado de cada iniciativa (cuantificable)
+5. Cierra con una RECOMENDACIÓN ejecutiva clara
+
+📋 CRITERIOS DE ANÁLISIS:
+• Piensa en costos operacionales (tiempo perdido)
+• Considera impacto en clima laboral
+• Analiza tendencias (¿va mejorando o empeorando?)
+• Enfócate en ROI de las soluciones
+• MÁXIMO 200 palabras - sé ejecutivo y preciso
+
+FORMATO ESPERADO:
+Diagnóstico ejecutivo (¿qué está pasando?)
+Riesgo principal identificado
+Iniciativas estratégicas:
+1. [Acción] - Impacto esperado: [%]
+2. [Acción] - Impacto esperado: [%]
+3. [Acción] - Impacto esperado: [%]
+Recomendación: [Decisión clave]
+
+GENERA TU ANÁLISIS ESTRATÉGICO:'''
+        : '''
+EXECUTIVE DASHBOARD - ORGANIZATIONAL ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 OPERATIONAL KPIs:
+  • Active users: $activeUsers people
+  • Total records: $totalCheckIns check-ins
+  • Average score: ${avgScore.toStringAsFixed(1)}/100 points
+  • Punctuality rate: ${punctualityRate.toStringAsFixed(1)}%
+  • Late arrivals: $lateCheckIns ($latePercentage% of total)
+
+🎯 YOUR STRATEGIC MISSION:
+1. Assess ORGANIZATIONAL HEALTH in 2-3 lines (use hard data)
+2. Identify the BIGGEST operational RISK (impact on productivity/costs)
+3. Provide 3 prioritized STRATEGIC INITIATIVES to implement
+4. Project the expected IMPACT of each initiative (quantifiable)
+5. Close with a clear executive RECOMMENDATION
+
+📋 ANALYSIS CRITERIA:
+• Think about operational costs (lost time)
+• Consider impact on work climate
+• Analyze trends (improving or worsening?)
+• Focus on ROI of solutions
+• MAX 200 words - be executive and precise
+
+EXPECTED FORMAT:
+Executive diagnosis (what's happening?)
+Main risk identified
+Strategic initiatives:
+1. [Action] - Expected impact: [%]
+2. [Action] - Expected impact: [%]
+3. [Action] - Expected impact: [%]
+Recommendation: [Key decision]
+
+GENERATE YOUR STRATEGIC ANALYSIS:''';
+
+    final prompt = '$systemPrompt\n\n$contextPrompt';
+
+    try {
+      final content = [Content.text(prompt)];
+      final response = await _model.generateContent(content);
+
+      return response.text ?? 'No se pudo generar análisis';
+    } catch (e) {
+      throw Exception('Error generating manager insights: $e');
     }
   }
 

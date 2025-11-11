@@ -60,8 +60,35 @@ class AttendanceModel with _$AttendanceModel {
     DateTime? createdAt,
   }) = _AttendanceModel;
 
-  factory AttendanceModel.fromJson(Map<String, dynamic> json) =>
-      _$AttendanceModelFromJson(json);
+  factory AttendanceModel.fromJson(Map<String, dynamic> json) {
+    // Convertir snake_case a camelCase manualmente
+    return AttendanceModel(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      checkInTime: DateTime.parse(json['check_in_time'] as String),
+      checkOutTime: json['check_out_time'] != null
+          ? DateTime.parse(json['check_out_time'] as String)
+          : null,
+      checkInLatitude: (json['check_in_latitude'] as num).toDouble(),
+      checkInLongitude: (json['check_in_longitude'] as num).toDouble(),
+      checkOutLatitude: json['check_out_latitude'] != null
+          ? (json['check_out_latitude'] as num).toDouble()
+          : null,
+      checkOutLongitude: json['check_out_longitude'] != null
+          ? (json['check_out_longitude'] as num).toDouble()
+          : null,
+      checkInPhotoUrl: json['check_in_photo_url'] as String,
+      checkOutPhotoUrl: json['check_out_photo_url'] as String?,
+      checkInAddress: json['check_in_address'] as String?,
+      checkOutAddress: json['check_out_address'] as String?,
+      isLate: json['is_late'] as bool? ?? false,
+      minutesLate: (json['minutes_late'] as num?)?.toInt() ?? 0,
+      synced: json['synced'] as bool? ?? true,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+    );
+  }
 }
 
 @freezed

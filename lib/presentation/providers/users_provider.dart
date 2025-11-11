@@ -36,6 +36,7 @@ final supervisorsListProvider = FutureProvider.autoDispose<List<UserModel>>((
 
 /// Provider de la lista de todos los usuarios
 /// Caché de 2 minutos para balance entre frescura y performance
+/// Filtra según rol: supervisor solo ve workers, manager ve todos
 final allUsersListProvider = FutureProvider.autoDispose<List<UserModel>>((
   ref,
 ) async {
@@ -49,11 +50,24 @@ final allUsersListProvider = FutureProvider.autoDispose<List<UserModel>>((
   ref.onDispose(() => timer.cancel());
 
   final repository = ref.watch(usersRepositoryProvider);
+  final authState = ref.read(authNotifierProvider);
+  final currentUser = authState.value;
+
+  // Si no hay usuario autenticado, retornar lista vacía
+  if (currentUser == null) return [];
+
+  // Si es supervisor, solo mostrar sus workers
+  if (currentUser.role == 'supervisor') {
+    return repository.getWorkersBySupervisor(currentUser.id);
+  }
+
+  // Manager ve todos los usuarios
   return repository.getAllUsers(activeOnly: true);
 });
 
 /// Provider de estadísticas de usuarios
 /// Caché de 1 minuto para datos que cambian frecuentemente
+/// Filtra según rol: supervisor solo ve estadísticas de sus workers
 final userStatisticsProvider = FutureProvider.autoDispose<Map<String, int>>((
   ref,
 ) async {
@@ -67,6 +81,36 @@ final userStatisticsProvider = FutureProvider.autoDispose<Map<String, int>>((
   ref.onDispose(() => timer.cancel());
 
   final repository = ref.watch(usersRepositoryProvider);
+  final authState = ref.read(authNotifierProvider);
+  final currentUser = authState.value;
+
+  // Si no hay usuario autenticado, retornar estadísticas vacías
+  if (currentUser == null) {
+    return {
+      'total': 0,
+      'active': 0,
+      'inactive': 0,
+      'workers': 0,
+      'supervisors': 0,
+    };
+  }
+
+  // Si es supervisor, solo mostrar estadísticas de sus workers
+  if (currentUser.role == 'supervisor') {
+    final workers = await repository.getWorkersBySupervisor(currentUser.id);
+    final active = workers.where((w) => w.isActive).length;
+    final inactive = workers.where((w) => !w.isActive).length;
+
+    return {
+      'total': workers.length,
+      'active': active,
+      'inactive': inactive,
+      'workers': active, // Todos son workers
+      'supervisors': 0, // No muestra supervisores
+    };
+  }
+
+  // Manager ve todas las estadísticas
   return repository.getUserStatistics();
 });
 
@@ -156,11 +200,13 @@ final createUserProvider = Provider((ref) {
 /// Actualizar usuario
 final updateUserProvider = Provider((ref) {
   final repository = ref.read(usersRepositoryProvider);
+  final supabase = ref.read(supabaseDatasourceProvider);
 
   return ({
     required String userId,
     String? fullName,
     String? phone,
+    String? newPassword, // Nueva contraseña opcional
     File? newPhotoFile,
     String? supervisorId,
     bool? isActive,
@@ -174,6 +220,11 @@ final updateUserProvider = Provider((ref) {
           userId: userId,
           photoFile: newPhotoFile,
         );
+      }
+
+      // Actualizar contraseña si se proporciona
+      if (newPassword != null && newPassword.isNotEmpty) {
+        await supabase.updatePassword(userId, newPassword);
       }
 
       final updates = <String, dynamic>{};
@@ -266,9 +317,23 @@ class PaginatedUsersNotifier extends Notifier<PaginationState> {
 
     try {
       final repository = ref.read(usersRepositoryProvider);
+      final authState = ref.read(authNotifierProvider);
+      final currentUser = authState.value;
 
-      // Por ahora usar getAllUsers (ya implementado)
-      final allUsers = await repository.getAllUsers(activeOnly: true);
+      if (currentUser == null) {
+        state = state.copyWith(isLoading: false, hasMore: false);
+        return;
+      }
+
+      List<UserModel> allUsers;
+
+      // Si es supervisor, solo cargar sus workers
+      if (currentUser.role == 'supervisor') {
+        allUsers = await repository.getWorkersBySupervisor(currentUser.id);
+      } else {
+        // Manager ve todos los usuarios
+        allUsers = await repository.getAllUsers(activeOnly: true);
+      }
 
       // Simular paginación del lado del cliente
       final start = state.currentPage * _pageSize;
@@ -303,7 +368,27 @@ class PaginatedUsersNotifier extends Notifier<PaginationState> {
 
     try {
       final repository = ref.read(usersRepositoryProvider);
-      final results = await repository.searchUsers(query);
+      final authState = ref.read(authNotifierProvider);
+      final currentUser = authState.value;
+
+      if (currentUser == null) {
+        state = state.copyWith(isLoading: false, hasMore: false);
+        return;
+      }
+
+      List<UserModel> results;
+
+      // Si es supervisor, solo buscar entre sus workers
+      if (currentUser.role == 'supervisor') {
+        results = await repository.searchWorkersBySupervisor(
+          currentUser.id,
+          query,
+        );
+      } else {
+        // Manager puede buscar entre todos los usuarios
+        results = await repository.searchUsers(query);
+      }
+
       state = state.copyWith(
         users: results,
         currentPage: 1,

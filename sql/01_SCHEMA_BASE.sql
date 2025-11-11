@@ -1,13 +1,19 @@
 -- =============================================
--- TURNOTRACK - SCHEMA CONSOLIDADO COMPLETO
+-- TURNOTRACK - SCHEMA BASE (Sin Políticas RLS)
 -- =============================================
--- Este archivo consolida TODOS los esquemas y políticas
--- para evitar conflictos y duplicaciones.
+-- Este archivo contiene SOLO la estructura de la base de datos:
+-- - Extensiones
+-- - Tablas
+-- - Índices
+-- - Funciones auxiliares
+-- - Triggers
+-- - Storage buckets
 --
--- Ejecutar en orden en Supabase SQL Editor:
--- 1. Este archivo completo (00_CONSOLIDATED_SCHEMA.sql)
--- 2. NO ejecutar 01_schema.sql ni 02_rls_policies.sql
+-- NO incluye políticas RLS (ver 02_RLS_POLICIES.sql)
 --
+-- ORDEN DE EJECUCIÓN:
+-- 1. Ejecutar este archivo (01_SCHEMA_BASE.sql)
+-- 2. Ejecutar las políticas (02_RLS_POLICIES.sql)
 -- =============================================
 
 -- =============================================
@@ -79,10 +85,12 @@ CREATE TABLE IF NOT EXISTS sales (
 );
 
 -- PERFORMANCE METRICS TABLE
+-- ✅ ACTUALIZADO: Agregada columna average_check_in_time para función de score ponderado
 CREATE TABLE IF NOT EXISTS performance_metrics (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     attendance_score INTEGER NOT NULL CHECK (attendance_score >= 0 AND attendance_score <= 100),
+    average_check_in_time DECIMAL(5, 2) DEFAULT 0,  -- ✅ NUEVA: Promedio de hora de check-in
     punctuality_rate DECIMAL(5, 2) CHECK (punctuality_rate >= 0 AND punctuality_rate <= 100),
     total_check_ins INTEGER DEFAULT 0 CHECK (total_check_ins >= 0),
     late_check_ins INTEGER DEFAULT 0 CHECK (late_check_ins >= 0),
@@ -338,6 +346,192 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =============================================
+-- FUNCIÓN PARA CALCULAR SCORE PONDERADO
+-- =============================================
+-- ✅ INTEGRADO: Función para calcular score con pesos
+-- Fórmula: Score = (Ventas * 0.40) + (Puntualidad * 0.35) + (Asistencia * 0.25)
+
+CREATE OR REPLACE FUNCTION calculate_weighted_attendance_score(
+  user_uuid UUID,
+  start_date DATE,
+  end_date DATE
+)
+RETURNS INTEGER AS $$
+DECLARE
+  sales_score INTEGER := 0;
+  punctuality_score INTEGER := 0;
+  attendance_score INTEGER := 0;
+  total_score INTEGER := 0;
+  
+  -- Variables para cálculo de ventas
+  user_total_sales DECIMAL(12,2);
+  max_sales DECIMAL(12,2);
+  
+  -- Variables para cálculo de puntualidad
+  total_checkins INTEGER;
+  late_checkins INTEGER;
+  punctuality_rate DECIMAL(5,2);
+  
+  -- Variables para cálculo de asistencia
+  expected_days INTEGER;
+  actual_days INTEGER;
+  attendance_rate DECIMAL(5,2);
+BEGIN
+  -- ============================================
+  -- 1. CALCULAR SCORE DE VENTAS (40%)
+  -- ============================================
+  -- Obtener ventas del usuario
+  SELECT COALESCE(SUM(amount), 0)
+  INTO user_total_sales
+  FROM sales
+  WHERE user_id = user_uuid
+    AND date BETWEEN start_date AND end_date;
+  
+  -- Obtener máximo de ventas en el período
+  SELECT COALESCE(MAX(total), 0)
+  INTO max_sales
+  FROM (
+    SELECT user_id, SUM(amount) as total
+    FROM sales
+    WHERE date BETWEEN start_date AND end_date
+    GROUP BY user_id
+  ) as user_sales;
+  
+  -- Calcular score de ventas (0-100)
+  IF max_sales > 0 THEN
+    sales_score := ROUND((user_total_sales / max_sales * 100)::NUMERIC);
+  ELSE
+    sales_score := 0;
+  END IF;
+  
+  -- ============================================
+  -- 2. CALCULAR SCORE DE PUNTUALIDAD (35%)
+  -- ============================================
+  -- Contar check-ins y llegadas tarde
+  SELECT 
+    COUNT(*),
+    COUNT(*) FILTER (WHERE is_late = true)
+  INTO total_checkins, late_checkins
+  FROM attendance
+  WHERE user_id = user_uuid
+    AND check_in_time::DATE BETWEEN start_date AND end_date;
+  
+  -- Calcular tasa de puntualidad
+  IF total_checkins > 0 THEN
+    punctuality_rate := ((total_checkins - late_checkins)::DECIMAL / total_checkins * 100);
+    punctuality_score := ROUND(punctuality_rate);
+  ELSE
+    punctuality_score := 0;
+  END IF;
+  
+  -- ============================================
+  -- 3. CALCULAR SCORE DE ASISTENCIA (25%)
+  -- ============================================
+  -- Calcular días esperados (excluyendo fines de semana)
+  SELECT COUNT(*)
+  INTO expected_days
+  FROM generate_series(start_date, end_date, '1 day'::interval) d
+  WHERE EXTRACT(DOW FROM d) BETWEEN 1 AND 5; -- Lunes a Viernes
+  
+  -- Contar días con check-in
+  SELECT COUNT(DISTINCT check_in_time::DATE)
+  INTO actual_days
+  FROM attendance
+  WHERE user_id = user_uuid
+    AND check_in_time::DATE BETWEEN start_date AND end_date
+    AND EXTRACT(DOW FROM check_in_time) BETWEEN 1 AND 5;
+  
+  -- Calcular tasa de asistencia
+  IF expected_days > 0 THEN
+    attendance_rate := (actual_days::DECIMAL / expected_days * 100);
+    attendance_score := ROUND(attendance_rate);
+  ELSE
+    attendance_score := 0;
+  END IF;
+  
+  -- ============================================
+  -- 4. CALCULAR SCORE TOTAL PONDERADO
+  -- ============================================
+  total_score := ROUND(
+    (sales_score * 0.40) + 
+    (punctuality_score * 0.35) + 
+    (attendance_score * 0.25)
+  );
+  
+  -- Asegurar que esté en rango 0-100
+  IF total_score < 0 THEN
+    total_score := 0;
+  ELSIF total_score > 100 THEN
+    total_score := 100;
+  END IF;
+  
+  RETURN total_score;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =============================================
+-- FUNCIÓN PARA ACTUALIZAR MÉTRICAS CON NUEVO SCORE
+-- =============================================
+CREATE OR REPLACE FUNCTION update_performance_metrics_with_weighted_score()
+RETURNS void AS $$
+DECLARE
+  user_record RECORD;
+  start_date DATE := DATE_TRUNC('month', CURRENT_DATE)::DATE;
+  end_date DATE := CURRENT_DATE;
+  new_score INTEGER;
+BEGIN
+  -- Iterar sobre todos los usuarios activos
+  FOR user_record IN 
+    SELECT id FROM users 
+    WHERE is_active = true AND role IN ('worker', 'supervisor')
+  LOOP
+    -- Calcular nuevo score ponderado
+    new_score := calculate_weighted_attendance_score(
+      user_record.id,
+      start_date,
+      end_date
+    );
+    
+    -- Actualizar o insertar en performance_metrics
+    INSERT INTO performance_metrics (
+      user_id,
+      attendance_score,
+      average_check_in_time,
+      punctuality_rate,
+      total_check_ins,
+      late_check_ins,
+      period_start,
+      period_end
+    )
+    SELECT 
+      user_record.id,
+      new_score,
+      COALESCE(AVG(EXTRACT(HOUR FROM check_in_time) + EXTRACT(MINUTE FROM check_in_time) / 60.0), 0),
+      CASE 
+        WHEN COUNT(*) > 0 
+        THEN ((COUNT(*) - COUNT(*) FILTER (WHERE is_late = true))::DECIMAL / COUNT(*) * 100)
+        ELSE 0 
+      END,
+      COUNT(*),
+      COUNT(*) FILTER (WHERE is_late = true),
+      start_date,
+      end_date
+    FROM attendance
+    WHERE user_id = user_record.id
+      AND check_in_time::DATE BETWEEN start_date AND end_date
+    ON CONFLICT (user_id, period_start, period_end) 
+    DO UPDATE SET
+      attendance_score = EXCLUDED.attendance_score,
+      average_check_in_time = EXCLUDED.average_check_in_time,
+      punctuality_rate = EXCLUDED.punctuality_rate,
+      total_check_ins = EXCLUDED.total_check_ins,
+      late_check_ins = EXCLUDED.late_check_ins,
+      updated_at = NOW();
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =============================================
 -- STEP 5: TRIGGERS
 -- =============================================
 
@@ -363,279 +557,7 @@ CREATE TRIGGER audit_users_trigger
     EXECUTE FUNCTION audit_users_changes();
 
 -- =============================================
--- STEP 6: HABILITAR ROW LEVEL SECURITY
--- =============================================
--- 
--- ✅ ACTUALIZADO: RLS habilitado con políticas sin recursión
--- Fecha: 3 de noviembre, 2025
-
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;  -- ✅ HABILITADO
-ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
-ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE performance_metrics ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
-ALTER TABLE rate_limit_log ENABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
-
--- =============================================
--- STEP 7: POLÍTICAS RLS PARA USERS (SIN RECURSIÓN)
--- =============================================
--- ✅ ACTUALIZADO: Políticas optimizadas usando funciones SECURITY DEFINER
--- para evitar recursión infinita
-
--- Limpiar políticas existentes
-DROP POLICY IF EXISTS "workers_read_own_profile" ON users;
-DROP POLICY IF EXISTS "workers_update_own_profile" ON users;
-DROP POLICY IF EXISTS "supervisors_read_team" ON users;
-DROP POLICY IF EXISTS "supervisors_update_team" ON users;
-DROP POLICY IF EXISTS "supervisors_create_workers" ON users;
-DROP POLICY IF EXISTS "managers_read_all" ON users;
-DROP POLICY IF EXISTS "managers_create_users" ON users;
-DROP POLICY IF EXISTS "managers_update_users" ON users;
-DROP POLICY IF EXISTS "managers_delete_users" ON users;
-
--- =============================================
--- POLÍTICAS DE LECTURA (SELECT)
--- =============================================
-
--- Workers: Solo pueden ver su propio perfil
-CREATE POLICY "workers_read_own_profile"
-ON users FOR SELECT
-USING (auth.uid() = id);
-
--- Supervisors: Ver su perfil + workers bajo su supervisión
-CREATE POLICY "supervisors_read_team"
-ON users FOR SELECT
-USING (
-  is_supervisor()
-  AND (
-    auth.uid() = id  -- Ver su propio perfil
-    OR (supervisor_id = auth.uid() AND role = 'worker')  -- Ver sus workers
-  )
-);
-
--- Managers: Ver todos los usuarios
-CREATE POLICY "managers_read_all"
-ON users FOR SELECT
-USING (is_manager());
-
--- =============================================
--- POLÍTICAS DE ACTUALIZACIÓN (UPDATE)
--- =============================================
-
--- Workers: Actualizar solo su propio perfil (no pueden cambiar role ni supervisor_id)
-CREATE POLICY "workers_update_own_profile"
-ON users FOR UPDATE
-USING (auth.uid() = id)
-WITH CHECK (
-  auth.uid() = id
-  AND role = (SELECT role FROM users WHERE id = auth.uid())  -- Role no cambia
-  AND supervisor_id = (SELECT supervisor_id FROM users WHERE id = auth.uid())  -- Supervisor no cambia
-);
-
--- Supervisors: Actualizar workers bajo su supervisión
-CREATE POLICY "supervisors_update_team"
-ON users FOR UPDATE
-USING (
-  is_supervisor()
-  AND supervisor_id = auth.uid()
-  AND role = 'worker'
-)
-WITH CHECK (
-  supervisor_id = auth.uid()
-  AND role = 'worker'
-);
-
--- Managers: Actualizar cualquier usuario excepto otros managers
-CREATE POLICY "managers_update_users"
-ON users FOR UPDATE
-USING (
-  is_manager()
-  AND role != 'manager'
-)
-WITH CHECK (role != 'manager');
-
--- =============================================
--- POLÍTICAS DE INSERCIÓN (INSERT)
--- =============================================
-
--- Supervisors: Crear workers bajo su supervisión
-CREATE POLICY "supervisors_create_workers"
-ON users FOR INSERT
-WITH CHECK (
-  is_supervisor()
-  AND role = 'worker'
-  AND supervisor_id = auth.uid()
-);
-
--- Managers: Crear supervisores y workers
-CREATE POLICY "managers_create_users"
-ON users FOR INSERT
-WITH CHECK (
-  is_manager()
-  AND role IN ('worker', 'supervisor')
-);
-
--- =============================================
--- POLÍTICAS DE ELIMINACIÓN (DELETE)
--- =============================================
-
--- Managers: Eliminar cualquier usuario excepto otros managers
-CREATE POLICY "managers_delete_users"
-ON users FOR DELETE
-USING (
-  is_manager()
-  AND role != 'manager'
-);
-
--- =============================================
--- STEP 8: POLÍTICAS RLS PARA ATTENDANCE
--- =============================================
-
-DROP POLICY IF EXISTS "workers_read_own_attendance" ON attendance;
-DROP POLICY IF EXISTS "workers_create_own_attendance" ON attendance;
-DROP POLICY IF EXISTS "workers_update_own_checkout" ON attendance;
-DROP POLICY IF EXISTS "supervisors_read_team_attendance" ON attendance;
-DROP POLICY IF EXISTS "managers_read_all_attendance" ON attendance;
-
--- Workers: Solo pueden ver sus propios registros
-CREATE POLICY "workers_read_own_attendance"
-ON attendance FOR SELECT
-USING (user_id = auth.uid());
-
--- Workers: Solo pueden crear sus propios registros
-CREATE POLICY "workers_create_own_attendance"
-ON attendance FOR INSERT
-WITH CHECK (
-  user_id = auth.uid()
-  AND check_rate_limit(auth.uid(), 'check_in', 10, 60)
-  AND NOT EXISTS (
-    SELECT 1 FROM attendance 
-    WHERE user_id = auth.uid() 
-    AND (check_in_time::DATE) = CURRENT_DATE
-    AND check_out_time IS NULL
-  )
-);
-
--- Workers: Solo pueden actualizar sus propios check-outs
-CREATE POLICY "workers_update_own_checkout"
-ON attendance FOR UPDATE
-USING (
-  user_id = auth.uid()
-  AND check_out_time IS NULL
-)
-WITH CHECK (
-  user_id = auth.uid()
-  AND check_out_time IS NOT NULL
-  AND check_in_time = (SELECT check_in_time FROM attendance WHERE id = attendance.id)
-);
-
--- Supervisors: Pueden ver attendance de su equipo
-CREATE POLICY "supervisors_read_team_attendance"
-ON attendance FOR SELECT
-USING (
-  auth.uid() IN (SELECT id FROM users WHERE role IN ('supervisor', 'manager'))
-  AND user_id IN (
-    SELECT id FROM users 
-    WHERE supervisor_id = auth.uid() OR id = auth.uid()
-  )
-);
-
--- Managers: Acceso total de lectura
-CREATE POLICY "managers_read_all_attendance"
-ON attendance FOR SELECT
-USING (auth.uid() IN (SELECT id FROM users WHERE role = 'manager'));
-
--- =============================================
--- STEP 9: POLÍTICAS RLS PARA LOCATIONS
--- =============================================
-
-DROP POLICY IF EXISTS "workers_read_locations" ON locations;
-DROP POLICY IF EXISTS "managers_manage_locations" ON locations;
-
-CREATE POLICY "workers_read_locations"
-ON locations FOR SELECT
-USING (is_active = true);
-
-CREATE POLICY "managers_manage_locations"
-ON locations FOR ALL
-USING (auth.uid() IN (SELECT id FROM users WHERE role = 'manager'));
-
--- =============================================
--- STEP 10: POLÍTICAS RLS PARA PERFORMANCE_METRICS
--- =============================================
-
-DROP POLICY IF EXISTS "workers_read_own_metrics" ON performance_metrics;
-DROP POLICY IF EXISTS "supervisors_read_team_metrics" ON performance_metrics;
-DROP POLICY IF EXISTS "managers_read_all_metrics" ON performance_metrics;
-DROP POLICY IF EXISTS "system_write_metrics" ON performance_metrics;
-
-CREATE POLICY "workers_read_own_metrics"
-ON performance_metrics FOR SELECT
-USING (user_id = auth.uid());
-
-CREATE POLICY "supervisors_read_team_metrics"
-ON performance_metrics FOR SELECT
-USING (
-  auth.uid() IN (SELECT id FROM users WHERE role IN ('supervisor', 'manager'))
-  AND user_id IN (
-    SELECT id FROM users 
-    WHERE supervisor_id = auth.uid() OR id = auth.uid()
-  )
-);
-
-CREATE POLICY "managers_read_all_metrics"
-ON performance_metrics FOR SELECT
-USING (auth.uid() IN (SELECT id FROM users WHERE role = 'manager'));
-
-CREATE POLICY "system_write_metrics"
-ON performance_metrics FOR INSERT
-WITH CHECK (true);
-
--- =============================================
--- STEP 11: POLÍTICAS RLS PARA SALES
--- =============================================
-
-DROP POLICY IF EXISTS "workers_manage_own_sales" ON sales;
-DROP POLICY IF EXISTS "supervisors_read_team_sales" ON sales;
-DROP POLICY IF EXISTS "managers_read_all_sales" ON sales;
-
-CREATE POLICY "workers_manage_own_sales"
-ON sales FOR ALL
-USING (user_id = auth.uid())
-WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "supervisors_read_team_sales"
-ON sales FOR SELECT
-USING (
-  auth.uid() IN (SELECT id FROM users WHERE role IN ('supervisor', 'manager'))
-  AND user_id IN (
-    SELECT id FROM users 
-    WHERE supervisor_id = auth.uid() OR id = auth.uid()
-  )
-);
-
-CREATE POLICY "managers_read_all_sales"
-ON sales FOR SELECT
-USING (auth.uid() IN (SELECT id FROM users WHERE role = 'manager'));
-
--- =============================================
--- STEP 12: POLÍTICAS RLS PARA SECURITY TABLES
--- =============================================
-
-DROP POLICY IF EXISTS "managers_read_rate_limits" ON rate_limit_log;
-DROP POLICY IF EXISTS "managers_read_audit_log" ON audit_log;
-
-CREATE POLICY "managers_read_rate_limits"
-ON rate_limit_log FOR SELECT
-USING (auth.uid() IN (SELECT id FROM users WHERE role = 'manager'));
-
-CREATE POLICY "managers_read_audit_log"
-ON audit_log FOR SELECT
-USING (auth.uid() IN (SELECT id FROM users WHERE role = 'manager'));
-
--- =============================================
--- STEP 13: STORAGE BUCKETS (SOLO SI NO EXISTEN)
+-- STEP 6: STORAGE BUCKETS
 -- =============================================
 
 -- Crear buckets si no existen
@@ -645,101 +567,25 @@ VALUES
     ('profile-photos', 'profile-photos', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Storage policies para attendance photos
-DROP POLICY IF EXISTS "Users can upload their attendance photos" ON storage.objects;
-CREATE POLICY "Users can upload their attendance photos"
-    ON storage.objects FOR INSERT
-    TO authenticated
-    WITH CHECK (
-      bucket_id = 'attendance-photos' 
-      AND auth.uid()::text = split_part(name, '/', 1)
-    );
-
-DROP POLICY IF EXISTS "Users can view attendance photos" ON storage.objects;
-CREATE POLICY "Users can view attendance photos"
-    ON storage.objects FOR SELECT
-    TO authenticated
-    USING (bucket_id = 'attendance-photos');
-
--- Storage policies para profile photos
--- Managers y supervisors pueden subir fotos de cualquier usuario
-DROP POLICY IF EXISTS "Users can upload their profile photos" ON storage.objects;
-CREATE POLICY "Users can upload their profile photos"
-    ON storage.objects FOR INSERT
-    TO authenticated
-    WITH CHECK (
-      bucket_id = 'profile-photos'
-      AND (
-        -- Usuarios pueden subir su propia foto
-        auth.uid()::text = split_part(name, '/', 1)
-        OR
-        -- Managers y supervisors pueden subir fotos de cualquier usuario
-        EXISTS (
-          SELECT 1 FROM users
-          WHERE id = auth.uid()
-          AND role IN ('manager', 'supervisor')
-        )
-      )
-    );
-
--- Managers y supervisors pueden actualizar fotos de cualquier usuario
-DROP POLICY IF EXISTS "Users can update their profile photos" ON storage.objects;
-CREATE POLICY "Users can update their profile photos"
-    ON storage.objects FOR UPDATE
-    TO authenticated
-    USING (
-      bucket_id = 'profile-photos'
-      AND (
-        -- Usuarios pueden actualizar su propia foto
-        auth.uid()::text = split_part(name, '/', 1)
-        OR
-        -- Managers y supervisors pueden actualizar fotos de cualquier usuario
-        EXISTS (
-          SELECT 1 FROM users
-          WHERE id = auth.uid()
-          AND role IN ('manager', 'supervisor')
-        )
-      )
-    );
-
-DROP POLICY IF EXISTS "Users can view profile photos" ON storage.objects;
-CREATE POLICY "Users can view profile photos"
-    ON storage.objects FOR SELECT
-    TO authenticated
-    USING (bucket_id = 'profile-photos');
-
--- Managers pueden eliminar fotos de cualquier usuario
-DROP POLICY IF EXISTS "Users can delete their profile photos" ON storage.objects;
-CREATE POLICY "Users can delete their profile photos"
-    ON storage.objects FOR DELETE
-    TO authenticated
-    USING (
-      bucket_id = 'profile-photos'
-      AND (
-        -- Usuarios pueden eliminar su propia foto
-        auth.uid()::text = split_part(name, '/', 1)
-        OR
-        -- Managers pueden eliminar fotos de cualquier usuario
-        EXISTS (
-          SELECT 1 FROM users
-          WHERE id = auth.uid()
-          AND role = 'manager'
-        )
-      )
-    );
-
 -- =============================================
--- ✅ SCHEMA CONSOLIDADO COMPLETO
+-- ✅ SCHEMA BASE COMPLETO
 -- =============================================
 -- 
 -- Este archivo incluye:
--- ✅ Todas las tablas necesarias
+-- ✅ Extensiones necesarias
+-- ✅ Todas las tablas (incluyendo columna average_check_in_time)
 -- ✅ Índices optimizados
 -- ✅ Funciones auxiliares
+-- ✅ Función de score ponderado integrada
 -- ✅ Triggers automáticos
--- ✅ RLS políticas sin duplicaciones
--- ✅ Rate limiting
--- ✅ Audit logging
 -- ✅ Storage buckets
+--
+-- SIGUIENTE PASO:
+-- Ejecutar 02_RLS_POLICIES.sql para aplicar políticas de seguridad
+--
+-- NOTAS IMPORTANTES:
+-- - Las funciones con SECURITY DEFINER se ejecutan con privilegios del owner
+-- - Para automatizar: crear cron job que ejecute update_performance_metrics_with_weighted_score()
+-- - Ejemplo cron: SELECT cron.schedule('update-metrics', '59 23 * * *', 'SELECT update_performance_metrics_with_weighted_score();');
 --
 -- =============================================

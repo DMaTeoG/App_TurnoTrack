@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../datasources/supabase_datasource.dart';
 import '../models/user_model.dart';
@@ -40,7 +42,27 @@ class UsersRepository implements IUserRepository {
         throw Exception('Workers deben tener un supervisor asignado');
       }
 
+      // 1️⃣ PRIMERO: Crear usuario en Supabase Auth
+      // Generar password temporal
+      final tempPassword = _generateTemporaryPassword();
+
+      final authResponse = await _datasource.client.auth.admin.createUser(
+        AdminUserAttributes(
+          email: email,
+          password: tempPassword,
+          emailConfirm: true, // Auto-confirmar email
+        ),
+      );
+
+      if (authResponse.user == null) {
+        throw Exception('Error al crear usuario en Auth');
+      }
+
+      final userId = authResponse.user!.id;
+
+      // 2️⃣ SEGUNDO: Crear registro en la tabla users con el UUID de Auth
       final userData = {
+        'id': userId, // ✅ Usar el UUID generado por Auth
         'email': email,
         'full_name': fullName,
         'role': role,
@@ -56,7 +78,11 @@ class UsersRepository implements IUserRepository {
           .select()
           .single();
 
+      debugPrint('Usuario creado: $email | Password temporal: $tempPassword');
+
       return UserModel.fromJson(response);
+    } on AuthException catch (e) {
+      throw Exception('Error de autenticación: ${e.message}');
     } on PostgrestException catch (e) {
       if (e.code == '23505') {
         // Unique violation
@@ -200,6 +226,29 @@ class UsersRepository implements IUserRepository {
           .toList();
     } catch (e) {
       throw Exception('Error al buscar usuarios: $e');
+    }
+  }
+
+  /// Buscar workers de un supervisor específico por nombre o email
+  Future<List<UserModel>> searchWorkersBySupervisor(
+    String supervisorId,
+    String query,
+  ) async {
+    try {
+      final response = await _datasource.client
+          .from('users')
+          .select()
+          .eq('role', 'worker')
+          .eq('supervisor_id', supervisorId)
+          .eq('is_active', true)
+          .or('full_name.ilike.%$query%,email.ilike.%$query%')
+          .order('full_name', ascending: true);
+
+      return (response as List)
+          .map((json) => UserModel.fromJson(json))
+          .toList();
+    } catch (e) {
+      throw Exception('Error al buscar workers: $e');
     }
   }
 
@@ -357,5 +406,21 @@ class UsersRepository implements IUserRepository {
     } catch (e) {
       throw Exception('Error al obtener estadísticas: $e');
     }
+  }
+
+  // ============================================
+  // PRIVATE HELPERS
+  // ============================================
+
+  /// Genera un password temporal seguro para nuevos usuarios
+  /// Formato: 8 caracteres con mayúsculas, minúsculas y números
+  String _generateTemporaryPassword() {
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random.secure();
+    return List.generate(
+      8,
+      (index) => chars[random.nextInt(chars.length)],
+    ).join();
   }
 }

@@ -29,6 +29,18 @@ class SupabaseDatasource {
     await _client.auth.signOut();
   }
 
+  Future<void> updatePassword(String userId, String newPassword) async {
+    try {
+      // Actualizar contraseña en Supabase Auth
+      await _client.auth.admin.updateUserById(
+        userId,
+        attributes: AdminUserAttributes(password: newPassword),
+      );
+    } catch (e) {
+      throw Exception('Error al actualizar contraseña: $e');
+    }
+  }
+
   User? getCurrentUser() {
     return _client.auth.currentUser;
   }
@@ -213,7 +225,19 @@ class SupabaseDatasource {
         .lte('date', end.toIso8601String())
         .order('date', ascending: false);
 
-    return (response as List).map((json) => SalesData.fromJson(json)).toList();
+    // Mapear snake_case a camelCase
+    return (response as List).map((json) {
+      final mapped = {
+        'id': json['id'],
+        'userId': json['user_id'],
+        'date': json['date'],
+        'amount': json['amount'],
+        'quantity': json['quantity'],
+        'productCategory': json['product_category'],
+        'metadata': json['metadata'],
+      };
+      return SalesData.fromJson(mapped);
+    }).toList();
   }
 
   Future<void> createSale({

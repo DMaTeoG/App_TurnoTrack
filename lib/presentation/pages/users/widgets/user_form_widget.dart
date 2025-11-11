@@ -10,9 +10,15 @@ import 'photo_picker_widget.dart';
 /// Formulario para crear/editar usuarios con integración completa a Supabase
 class UserFormWidget extends ConsumerStatefulWidget {
   final String? userId; // Si existe, modo edición
+  final String? currentUserRole; // Rol del usuario actual (para permisos)
   final Function(String userName) onSuccess;
 
-  const UserFormWidget({super.key, this.userId, required this.onSuccess});
+  const UserFormWidget({
+    super.key,
+    this.userId,
+    this.currentUserRole,
+    required this.onSuccess,
+  });
 
   @override
   ConsumerState<UserFormWidget> createState() => _UserFormWidgetState();
@@ -57,37 +63,43 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
     try {
       final user = await ref.read(userByIdProvider(widget.userId!).future);
 
-      if (mounted) {
-        setState(() {
-          _nameController.text = user.fullName;
-          _emailController.text = user.email;
-          _phoneController.text = user.phone ?? '';
-          _selectedRole = user.role;
-          _isActive = user.isActive;
-          _selectedSupervisorId = user.supervisorId;
-          _currentPhotoUrl = user.photoUrl; // Guardar foto actual
+      if (!mounted) return;
 
-          // El documento no está en el modelo, lo dejamos vacío
-          // En modo edición, la contraseña es opcional
-          // Si el usuario no la cambia, mantenemos la existente
-          _isPasswordValid = true; // Ya tiene contraseña en la BD
+      setState(() {
+        _nameController.text = user.fullName;
+        _emailController.text = user.email;
+        _phoneController.text = user.phone ?? '';
+        _selectedRole = user.role;
+        _isActive = user.isActive;
+        _selectedSupervisorId = user.supervisorId;
+        _currentPhotoUrl = user.photoUrl; // Guardar foto actual
 
-          // Validar todos los campos cargados
-          _validateName();
-          _validateEmail();
-          _validateDocument();
-          _validatePhone();
-        });
-      }
+        // El documento no está en el modelo, lo dejamos vacío
+        // En modo edición, la contraseña es opcional
+        // Si el usuario no la cambia, mantenemos la existente
+        _isPasswordValid = true; // Ya tiene contraseña en la BD
+
+        // Validar todos los campos cargados
+        _validateName();
+        _validateEmail();
+        _validateDocument();
+        _validatePhone();
+      });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar usuario: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted) return;
+
+      // Usar addPostFrameCallback para mostrar SnackBar de forma segura
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al cargar usuario: $e'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      });
     }
   }
 
@@ -188,39 +200,47 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
         // MODO EDICIÓN
         final updateUser = ref.read(updateUserProvider);
 
+        // Obtener nueva contraseña si se escribió algo
+        final newPassword = _passwordController.text.trim();
+
         user = await updateUser(
           userId: widget.userId!,
           fullName: _nameController.text.trim(),
           phone: _phoneController.text.trim().isEmpty
               ? null
               : _phoneController.text.trim(),
+          newPassword: newPassword.isEmpty
+              ? null
+              : newPassword, // Solo actualizar si no está vacía
           newPhotoFile: _selectedPhoto,
           supervisorId: _selectedSupervisorId,
           isActive: _isActive,
         );
-
-        // TODO: Si se cambió la contraseña, actualizar en Auth
-        // Por ahora, las contraseñas solo se pueden establecer al crear
       }
 
       if (mounted) {
         widget.onSuccess(user.fullName);
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
-          _isLoading = false;
-        });
+      if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_errorMessage!),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _isLoading = false;
+      });
+
+      // Usar addPostFrameCallback para mostrar SnackBar de forma segura
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_errorMessage!),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      });
     }
   }
 
@@ -535,7 +555,7 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
         Text(
           widget.userId == null
               ? '🔒 La contraseña es requerida para que el usuario pueda iniciar sesión'
-              : '🔓 Deja vacío si no quieres cambiar la contraseña actual',
+              : '🔓 Escribe una nueva contraseña para cambiarla, o déjalo vacío para mantener la actual',
           style: TextStyle(
             fontSize: 11,
             color: Colors.grey[600],
@@ -547,6 +567,153 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
   }
 
   Widget _buildRoleSelector() {
+    // Determinar roles disponibles según el usuario actual
+    final List<DropdownMenuItem<String>> availableRoles = [];
+
+    // Worker siempre disponible
+    availableRoles.add(
+      const DropdownMenuItem(
+        value: 'worker',
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Icon(Icons.person, color: AppTheme.primaryBlue, size: 20),
+              SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Trabajador',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    'Puede registrar asistencia y ventas',
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Supervisor y Manager solo si el usuario actual es Manager
+    if (widget.currentUserRole == 'manager') {
+      availableRoles.add(
+        const DropdownMenuItem(
+          value: 'supervisor',
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Icon(Icons.supervisor_account, color: Colors.orange, size: 20),
+                SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Supervisor',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      'Gestiona equipo y ve reportes',
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      availableRoles.add(
+        const DropdownMenuItem(
+          value: 'manager',
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.admin_panel_settings,
+                  color: Colors.purple,
+                  size: 20,
+                ),
+                SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Manager',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      'Control total del sistema',
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } else {
+      // ✅ FIX: Si el usuario actual NO es manager pero el usuario editado
+      // es supervisor/manager, agregar ese item como disabled para que no crashee
+      if (_selectedRole == 'supervisor' || _selectedRole == 'manager') {
+        availableRoles.add(
+          DropdownMenuItem(
+            value: _selectedRole,
+            enabled: false, // Deshabilitado, no se puede seleccionar
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Icon(
+                    _selectedRole == 'supervisor'
+                        ? Icons.supervisor_account
+                        : Icons.admin_panel_settings,
+                    color: Colors.grey,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _selectedRole == 'supervisor'
+                              ? 'Supervisor'
+                              : 'Manager',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const Text(
+                          'Solo managers pueden editar este rol',
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -573,107 +740,7 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
                 padding: EdgeInsets.only(right: 16),
                 child: Icon(Icons.arrow_drop_down),
               ),
-              items: const [
-                DropdownMenuItem(
-                  value: 'worker',
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.person,
-                          color: AppTheme.primaryBlue,
-                          size: 20,
-                        ),
-                        SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Trabajador',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            Text(
-                              'Puede registrar asistencia y ventas',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: 'supervisor',
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.supervisor_account,
-                          color: Colors.orange,
-                          size: 20,
-                        ),
-                        SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Supervisor',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            Text(
-                              'Gestiona equipo y ve reportes',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: 'manager',
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.admin_panel_settings,
-                          color: Colors.purple,
-                          size: 20,
-                        ),
-                        SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Gerente',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            Text(
-                              'Acceso total al sistema',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              items: availableRoles,
               onChanged: (value) {
                 setState(() {
                   _selectedRole = value!;

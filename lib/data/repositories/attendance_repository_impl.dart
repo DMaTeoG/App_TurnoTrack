@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/utils/app_logger.dart';
 import '../datasources/supabase_datasource.dart';
 import '../models/user_model.dart';
 import '../../domain/repositories/i_attendance_repository.dart';
@@ -134,6 +135,8 @@ class AttendanceRepositoryImpl implements IAttendanceRepository {
   }
 
   /// Upload attendance photo to Supabase Storage
+  /// NO comprime aquí porque ya viene comprimida desde el screen
+  /// Incluye user_id en el path para cumplir con RLS policy
   @override
   Future<String> uploadPhoto(String localPath) async {
     try {
@@ -142,22 +145,47 @@ class AttendanceRepositoryImpl implements IAttendanceRepository {
         throw Exception('File not found: $localPath');
       }
 
+      // La imagen ya viene comprimida desde check_in_screen
+      // No volver a comprimir para evitar pérdida de calidad
+
+      // Obtener el user_id actual
+      final userId = _datasource.client.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Path debe incluir user_id para cumplir con RLS policy:
+      // "auth.uid()::text = split_part(name, '/', 1)"
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final storagePath = 'attendance-photos/$fileName';
+      final storagePath = '$userId/$fileName';
+
+      // Log del tamaño para debugging
+      final fileSize = await file.length();
+      AppLogger.info(
+        'Subiendo imagen: ${fileSize ~/ 1024}KB - Path: attendance-photos/$storagePath',
+        'Upload',
+      );
 
       await _datasource.client.storage
           .from('attendance-photos')
-          .upload(storagePath, file);
+          .upload(
+            storagePath,
+            file,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+          );
 
       // Return public URL
       final publicUrl = _datasource.client.storage
           .from('attendance-photos')
           .getPublicUrl(storagePath);
 
+      AppLogger.success('Imagen subida exitosamente: $publicUrl', 'Upload');
       return publicUrl;
     } on StorageException catch (e) {
+      AppLogger.error('StorageException: ${e.message}', e);
       throw Exception('Photo upload error: ${e.message}');
     } catch (e) {
+      AppLogger.error('Error inesperado al subir foto', e);
       throw Exception('Unexpected photo upload error: $e');
     }
   }

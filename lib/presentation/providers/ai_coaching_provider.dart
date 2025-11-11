@@ -51,6 +51,7 @@ class AICoachingNotifier extends Notifier<AICoachingState> {
     required UserModel user,
     required PerformanceMetrics metrics,
     String language = 'es',
+    String coachingType = 'competitive', // 'competitive' or 'motivational'
   }) async {
     state = state.copyWith(isLoading: true, error: null);
 
@@ -59,6 +60,7 @@ class AICoachingNotifier extends Notifier<AICoachingState> {
         user: user,
         metrics: metrics,
         language: language,
+        coachingType: coachingType,
       );
 
       state = state.copyWith(
@@ -94,6 +96,31 @@ class AICoachingNotifier extends Notifier<AICoachingState> {
       state = state.copyWith(
         isLoading: false,
         error: 'Error generando resumen: ${e.toString()}',
+      );
+      return null;
+    }
+  }
+
+  /// Generate strategic insights for managers
+  Future<String?> generateManagerInsights({
+    required Map<String, dynamic> organizationKPIs,
+    String language = 'es',
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final insights = await _service.generateManagerInsights(
+        organizationKPIs: organizationKPIs,
+        language: language,
+      );
+
+      state = state.copyWith(isLoading: false, lastUpdated: DateTime.now());
+
+      return insights;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Error generando análisis: ${e.toString()}',
       );
       return null;
     }

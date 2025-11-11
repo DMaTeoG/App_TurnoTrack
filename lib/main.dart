@@ -18,6 +18,7 @@ import 'presentation/pages/dashboards/manager_dashboard_page.dart';
 import 'presentation/pages/dashboards/supervisor_dashboard_page.dart';
 import 'presentation/pages/dashboards/worker_dashboard_page.dart';
 import 'presentation/pages/users/user_list_page.dart';
+import 'presentation/pages/attendance/team_attendance_list_page.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/locale_provider.dart';
 import 'presentation/providers/auth_provider.dart';
@@ -255,6 +256,7 @@ class MyApp extends ConsumerWidget {
                     },
                   );
                 },
+                '/team-attendance': (context) => const TeamAttendanceListPage(),
               },
             );
           },

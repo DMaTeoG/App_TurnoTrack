@@ -421,11 +421,17 @@ class _UserListPageState extends ConsumerState<UserListPage> {
             ),
           ],
         ),
-        onTap: () {
-          // Navegar a editar
-          Navigator.of(
+        onTap: () async {
+          // Navegar a editar y esperar resultado
+          final result = await Navigator.of(
             context,
           ).push(SmoothPageRoute(page: CreateUserPage(userId: user.id)));
+
+          // Si se editó exitosamente, refrescar lista
+          if (result == true && mounted) {
+            ref.read(paginatedUsersProvider.notifier).refresh();
+            ref.invalidate(userStatisticsProvider);
+          }
         },
       ),
     );

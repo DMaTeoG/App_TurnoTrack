@@ -59,30 +59,60 @@ class AnalyticsRepositoryImpl implements IAnalyticsRepository {
     required DateTime endDate,
   }) async {
     try {
-      // Query a workers del supervisor
+      // Query a workers del supervisor con timeout
       final workers = await _datasource.client
           .from('users')
           .select('id')
           .eq('supervisor_id', supervisorId)
           .eq('role', 'worker')
-          .eq('is_active', true);
+          .eq('is_active', true)
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => <Map<String, dynamic>>[],
+          );
+
+      // Si no hay workers, retornar lista vacía inmediatamente
+      if (workers.isEmpty) {
+        // Debug: descomentar si necesitas ver en logs
+        // print('No hay workers para el supervisor $supervisorId');
+        return [];
+      }
+
+      // Debug: descomentar si necesitas ver en logs
+      // print('Encontrados ${workers.length} workers para supervisor $supervisorId');
 
       final List<PerformanceMetrics> teamMetrics = [];
 
+      // Procesar workers con límite de tiempo
       for (final worker in workers) {
-        final metrics = await getPerformanceMetrics(
-          userId: worker['id'],
-          startDate: startDate,
-          endDate: endDate,
-        );
-        teamMetrics.add(metrics);
+        try {
+          final metrics =
+              await getPerformanceMetrics(
+                userId: worker['id'],
+                startDate: startDate,
+                endDate: endDate,
+              ).timeout(
+                const Duration(seconds: 3),
+                onTimeout: () => _createEmptyMetrics(worker['id']),
+              );
+          teamMetrics.add(metrics);
+        } catch (e) {
+          // Debug: descomentar si necesitas ver en logs
+          // print('Error obteniendo métricas del worker ${worker['id']}: $e');
+          // Continuar con el siguiente worker
+          continue;
+        }
       }
 
       return teamMetrics;
-    } on PostgrestException catch (e) {
-      throw Exception('Error obteniendo métricas del equipo: ${e.message}');
+    } on PostgrestException {
+      // Debug: descomentar si necesitas ver en logs
+      // print('PostgrestException en getTeamPerformance: ${e.message}');
+      return []; // Retornar vacío en lugar de lanzar excepción
     } catch (e) {
-      throw Exception('Error inesperado: $e');
+      // Debug: descomentar si necesitas ver en logs
+      // print('Error inesperado en getTeamPerformance: $e');
+      return []; // Retornar vacío en lugar de lanzar excepción
     }
   }
 

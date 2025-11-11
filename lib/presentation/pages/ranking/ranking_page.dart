@@ -96,6 +96,37 @@ class _RankingPageState extends ConsumerState<RankingPage>
       ),
       body: rankingAsync.when(
         data: (rankingData) {
+          // Show empty state if no data
+          if (rankingData.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.emoji_events_outlined,
+                    size: 80,
+                    color: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No hay datos de ranking',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Registra asistencias para aparecer en el ranking',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
+          }
+
           // Convert PerformanceMetrics to RankingUser format
           final topUsers = rankingData.take(3).toList();
           final otherUsers = rankingData.skip(3).toList();
@@ -546,112 +577,168 @@ class _RankingPageState extends ConsumerState<RankingPage>
   }
 
   Widget _buildCurrentUserStats() {
-    // Mock current user ranking
-    final currentRank = 12;
-    final currentScore = 85;
-    final teamAvg = 78;
-    final difference = currentScore - teamAvg;
+    // Get real user metrics
+    final dateRange = _getDateRangeForPeriod();
+    final metricsAsync = ref.watch(userPerformanceMetricsProvider(dateRange));
+    final rankingParams = RankingParams(dateRange: dateRange, limit: 50);
+    final rankingAsync = ref.watch(performanceRankingProvider(rankingParams));
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingM),
-      child: Container(
-        padding: const EdgeInsets.all(AppTheme.spacingL),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppTheme.primaryBlue, AppTheme.accentBlue],
-          ),
-          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primaryBlue.withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            const Text(
-              'Tu Posición',
-              style: TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                const Text(
-                  '#',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+    return metricsAsync.when(
+      data: (metrics) {
+        return rankingAsync.when(
+          data: (allUsers) {
+            // Find current user's rank
+            final currentRank =
+                allUsers.indexWhere((u) => u.userId == widget.currentUser.id) +
+                1;
+            final currentScore = metrics.attendanceScore;
+
+            // Calculate team average
+            final teamAvg = allUsers.isNotEmpty
+                ? allUsers
+                          .map((u) => u.attendanceScore)
+                          .reduce((a, b) => a + b) /
+                      allUsers.length
+                : 0;
+            final difference = currentScore - teamAvg.round();
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacingM,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(AppTheme.spacingL),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppTheme.primaryBlue, AppTheme.accentBlue],
                   ),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
-                Text(
-                  '$currentRank',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 56,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.success.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: const [
-                      Icon(Icons.trending_up, color: Colors.white, size: 16),
-                      SizedBox(width: 4),
-                      Text(
-                        '+3',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                child: Column(
+                  children: [
+                    const Text(
+                      'Tu Posición',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        const Text(
+                          '#',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
+                        Text(
+                          currentRank > 0 ? '$currentRank' : '-',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 56,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (metrics.ranking != null && currentRank > 0)
+                          const SizedBox(width: 12),
+                        if (metrics.ranking != null && currentRank > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.success.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.trending_up,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Top',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppTheme.spacingL),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStatBubble(
+                          'Tu Score',
+                          '$currentScore',
+                          Icons.star,
+                        ),
+                        _buildStatBubble(
+                          'Promedio',
+                          '${teamAvg.round()}',
+                          Icons.people,
+                        ),
+                        _buildStatBubble(
+                          'Diferencia',
+                          '${difference > 0 ? '+' : ''}$difference',
+                          Icons.trending_up,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppTheme.spacingM),
+                    SmoothProgressIndicator(
+                      value: currentScore / 100,
+                      color: Colors.white,
+                      height: 10,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      currentRank > 10 && currentRank <= 50
+                          ? '¡Estás cerca del top 10!'
+                          : currentRank > 0 && currentRank <= 10
+                          ? '¡Estás en el top 10!'
+                          : 'Sigue registrando asistencias',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: AppTheme.spacingL),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatBubble('Tu Score', '$currentScore', Icons.star),
-                _buildStatBubble('Promedio', '$teamAvg', Icons.people),
-                _buildStatBubble(
-                  'Diferencia',
-                  '${difference > 0 ? '+' : ''}$difference',
-                  Icons.trending_up,
-                ),
-              ],
-            ),
-            const SizedBox(height: AppTheme.spacingM),
-            SmoothProgressIndicator(
-              value: currentScore / 100,
-              color: Colors.white,
-              height: 10,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '¡Estás a 13 puntos del top 10!',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-          ],
-        ),
+              ),
+            );
+          },
+          loading: () => const SizedBox(
+            height: 200,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (_, __) => const SizedBox(height: 100),
+        );
+      },
+      loading: () => const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
       ),
+      error: (_, __) => const SizedBox(height: 100),
     );
   }
 
@@ -966,6 +1053,10 @@ class _RankingPageState extends ConsumerState<RankingPage>
   }
 
   void _showProgressDialog() {
+    // Get real user metrics
+    final dateRange = DateRange.currentMonth();
+    final metricsAsync = ref.read(userPerformanceMetricsProvider(dateRange));
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -974,28 +1065,83 @@ class _RankingPageState extends ConsumerState<RankingPage>
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppTheme.spacingL),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.emoji_events, size: 60, color: AppTheme.warning),
-              const SizedBox(height: AppTheme.spacingM),
-              const Text(
-                'Mi Progreso',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: AppTheme.spacingM),
-              _buildProgressItem('Score Actual', 85, 100),
-              _buildProgressItem('Puntualidad', 95, 100),
-              _buildProgressItem('Asistencia', 96, 100),
-              const SizedBox(height: AppTheme.spacingM),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cerrar'),
+          child: metricsAsync.when(
+            data: (metrics) {
+              // Calculate punctuality and attendance percentages
+              final punctualityPercent = metrics.totalCheckIns > 0
+                  ? ((metrics.totalCheckIns - metrics.lateCheckIns) /
+                            metrics.totalCheckIns *
+                            100)
+                        .round()
+                  : 0;
+              final attendancePercent =
+                  metrics.attendanceScore; // Already 0-100
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.emoji_events,
+                    size: 60,
+                    color: AppTheme.warning,
+                  ),
+                  const SizedBox(height: AppTheme.spacingM),
+                  const Text(
+                    'Mi Progreso',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: AppTheme.spacingM),
+                  _buildProgressItem(
+                    'Score Actual',
+                    metrics.attendanceScore,
+                    100,
+                  ),
+                  _buildProgressItem('Puntualidad', punctualityPercent, 100),
+                  _buildProgressItem('Asistencia', attendancePercent, 100),
+                  const SizedBox(height: AppTheme.spacingM),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cerrar'),
+                    ),
+                  ),
+                ],
+              );
+            },
+            loading: () => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Cargando progreso...'),
+              ],
+            ),
+            error: (error, stack) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text(
+                  'Error al cargar progreso',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  'No hay datos disponibles aún',
+                  style: TextStyle(color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cerrar'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

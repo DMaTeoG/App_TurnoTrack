@@ -1,24 +1,28 @@
-# 📋 Schemas SQL - Asistión
+# 📋 Schemas SQL - TurnoTrack
 
-## ⚠️ IMPORTANTE: USAR SOLO EL ARCHIVO CONSOLIDADO
+## 🆕 NUEVA ESTRUCTURA MODULAR (Noviembre 2025)
 
-### ✅ Archivo Correcto a Usar
+### ✅ Archivos del Proyecto
 
-**`00_CONSOLIDATED_SCHEMA.sql`** - Este es el único archivo que debes ejecutar
+| Archivo | Contenido | Ejecutar |
+|---------|-----------|----------|
+| **01_SCHEMA_BASE.sql** | Tablas, índices, funciones, triggers, storage | ✅ **1º** |
+| **02_RLS_POLICIES.sql** | Políticas de seguridad (RLS) y storage | ✅ **2º** |
+| **03_verify_storage_buckets.sql** | Verificación de buckets (opcional) | 🟡 **3º** |
+| **performance_indexes.sql** | Índices adicionales (opcional) | 🟡 Opcional |
+| **RLS_ANALYSIS.md** | Documentación de políticas | 📖 Referencia |
+| **DEPLOYMENT_GUIDE.md** | Guía de instalación | 📖 Referencia |
 
-Este archivo consolidado incluye:
-- ✅ Todas las tablas (users, attendance, locations, sales, performance_metrics)
-- ✅ Índices optimizados para queries rápidas
-- ✅ Funciones auxiliares (is_manager, is_supervisor, check_rate_limit, etc.)
-- ✅ Triggers automáticos (updated_at, audit_log)
-- ✅ RLS (Row Level Security) completo sin duplicaciones
-- ✅ Rate limiting (10 req/hora)
-- ✅ Audit logging (rastreo de cambios)
-- ✅ Storage buckets (attendance-photos, profile-photos)
+**Ventajas:**
+- ✅ Separación clara entre estructura y seguridad
+- ✅ Fácil revisar/modificar políticas sin tocar tablas
+- ✅ Incluye función de **score ponderado** (Ventas 40%, Puntualidad 35%, Asistencia 25%)
+- ✅ Políticas RLS **auditadas y corregidas** para evitar conflictos
+- ✅ Archivos legacy eliminados para evitar confusión
 
 ---
 
-## 🚀 Instrucciones de Instalación
+## 🚀 Instrucciones de Instalación (Método Modular)
 
 ### Paso 1: Acceder a Supabase SQL Editor
 
@@ -26,72 +30,149 @@ Este archivo consolidado incluye:
 2. Selecciona tu proyecto TurnoTrack
 3. Ve a la sección **SQL Editor** (icono de base de datos)
 
-### Paso 2: Ejecutar el Schema Consolidado
+### Paso 2: Ejecutar Schema Base
 
 1. Crea una nueva query (botón "New query")
-2. Copia TODO el contenido de `00_CONSOLIDATED_SCHEMA.sql`
+2. Copia TODO el contenido de **`01_SCHEMA_BASE.sql`**
 3. Pega en el editor SQL
 4. Click en **"Run"** o presiona `Ctrl+Enter`
+5. Espera mensaje: "✅ SCHEMA BASE COMPLETO"
 
-### Paso 3: Verificar y Configurar Storage Buckets
+**Contenido:**
+- ✅ Extensiones (uuid-ossp, pgcrypto)
+- ✅ 7 tablas con columna `average_check_in_time` agregada
+- ✅ Índices optimizados
+- ✅ Funciones: is_manager, is_supervisor, check_rate_limit, get_organization_kpis
+- ✅ **Función de score ponderado**: calculate_weighted_attendance_score
+- ✅ **Función batch**: update_performance_metrics_with_weighted_score
+- ✅ Triggers (updated_at, audit)
+- ✅ Storage buckets creados
 
-1. Abre una nueva query en SQL Editor
-2. Copia TODO el contenido de `03_verify_storage_buckets.sql`
+### Paso 3: Aplicar Políticas de Seguridad
+
+1. Abre una nueva query
+2. Copia TODO el contenido de **`02_RLS_POLICIES.sql`**
 3. Pega y ejecuta
-4. Verifica que aparezca el mensaje: "✅ Storage buckets verificados y configurados exitosamente"
+4. Espera mensaje: "✅ POLÍTICAS RLS COMPLETAS"
 
-Este script:
-- ✅ Crea buckets `attendance-photos` (5MB max) y `profile-photos` (2MB max)
-- ✅ Configura formatos permitidos (JPEG, PNG, JPG, WebP)
-- ✅ Aplica políticas de seguridad para upload/view/delete
-- ✅ Verifica que todo esté correcto
+**Contenido:**
+- ✅ RLS habilitado en todas las tablas
+- ✅ Políticas para users (con correcciones para supervisors)
+- ✅ Políticas para attendance (supervisors pueden hacer check-in)
+- ✅ Políticas para sales y performance_metrics
+- ✅ Storage policies **corregidas** (paths flexibles)
+- ✅ Documentación de **problemas comunes y soluciones**
 
-### Paso 4: Verificar Instalación Completa
+### Paso 4: Verificar Instalación
 
-Ejecuta este query para verificar que todo se creó correctamente:
+Ejecuta en SQL Editor:
 
 ```sql
--- Verificar tablas creadas
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
-ORDER BY table_name;
+-- Verificar tablas
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' ORDER BY table_name;
 
 -- Verificar políticas RLS
-SELECT schemaname, tablename, policyname 
-FROM pg_policies 
-WHERE schemaname = 'public'
-ORDER BY tablename, policyname;
+SELECT schemaname, tablename, policyname FROM pg_policies 
+WHERE schemaname = 'public' ORDER BY tablename, policyname;
 
 -- Verificar funciones
-SELECT routine_name 
-FROM information_schema.routines 
-WHERE routine_schema = 'public' 
-AND routine_type = 'FUNCTION'
-ORDER BY routine_name;
+SELECT routine_name FROM information_schema.routines 
+WHERE routine_schema = 'public' AND routine_type = 'FUNCTION';
+
+-- Verificar columna nueva
+SELECT column_name, data_type FROM information_schema.columns 
+WHERE table_name = 'performance_metrics' AND column_name = 'average_check_in_time';
 ```
 
 **Resultado Esperado:**
 - ✅ 7 tablas: users, attendance, locations, sales, performance_metrics, rate_limit_log, audit_log
-- ✅ ~30 políticas RLS (sin duplicados)
-- ✅ 6 funciones: update_updated_at, is_manager, is_supervisor, get_supervisor_team, check_rate_limit, audit_users_changes
-- ✅ 2 storage buckets: attendance-photos, profile-photos
-- ✅ 7 políticas de storage (upload/view/delete)
+- ✅ ~35 políticas RLS (incluye system_update_metrics nueva)
+- ✅ 8 funciones (incluyendo calculate_weighted_attendance_score y update_performance_metrics_with_weighted_score)
+- ✅ Columna `average_check_in_time` presente en performance_metrics
+
+### Paso 5: Configurar Owner de Funciones (Importante)
+
+```sql
+-- Establecer owner correcto para funciones SECURITY DEFINER
+ALTER FUNCTION calculate_weighted_attendance_score OWNER TO postgres;
+ALTER FUNCTION update_performance_metrics_with_weighted_score OWNER TO postgres;
+ALTER FUNCTION get_organization_kpis OWNER TO postgres;
+ALTER FUNCTION is_manager OWNER TO postgres;
+ALTER FUNCTION is_supervisor OWNER TO postgres;
+```
+
+### Paso 6: (Opcional) Automatizar Actualización de Métricas
+
+```sql
+-- Crear cron job para actualizar métricas diariamente
+SELECT cron.schedule(
+  'update-performance-metrics',
+  '59 23 * * *',  -- 23:59 todos los días
+  'SELECT update_performance_metrics_with_weighted_score();'
+);
+```
 
 ---
 
-## 📁 Archivos SQL del Proyecto
+## 📁 Archivos del Proyecto
 
-| Archivo | Propósito | ¿Ejecutar? |
-|---------|-----------|------------|
-| **00_CONSOLIDATED_SCHEMA.sql** | Schema completo con tablas, RLS, funciones, triggers | ✅ SÍ (primero) |
-| **03_verify_storage_buckets.sql** | Verificar y configurar buckets de fotos | ✅ SÍ (segundo) |
-| **performance_indexes.sql** | Índices para optimizar queries (opcional) | 🟡 Opcional |
+| Archivo | Propósito | Estado |
+|---------|-----------|--------|
+| **01_SCHEMA_BASE.sql** | Estructura completa (tablas, funciones, triggers) | ✅ Principal |
+| **02_RLS_POLICIES.sql** | Políticas de seguridad y storage | ✅ Principal |
+| **03_verify_storage_buckets.sql** | Verificación de buckets | 🟡 Opcional |
+| **performance_indexes.sql** | Índices adicionales | 🟡 Opcional |
+| **RLS_ANALYSIS.md** | Documentación detallada de políticas | 📖 Referencia |
+| **DEPLOYMENT_GUIDE.md** | Guía de instalación paso a paso | � Referencia |
 
-**Orden de ejecución recomendado:**
-1. `00_CONSOLIDATED_SCHEMA.sql` - Base de datos completa
-2. `03_verify_storage_buckets.sql` - Storage para fotos
-3. `performance_indexes.sql` (opcional) - Optimización de performance
+---
+
+## ⚠️ Problemas Comunes Resueltos
+
+### 1. ❌ "new row violates row-level security policy"
+**Causa:** Políticas muy restrictivas  
+**Solución:** ✅ Aplicada en `02_RLS_POLICIES.sql`
+- Política `system_write_metrics` con CHECK(true) para funciones batch
+- Storage policies con paths flexibles
+
+### 2. ❌ Supervisor no puede hacer check-in
+**Causa:** Política solo permitía role='worker'  
+**Solución:** ✅ Política `workers_create_own_attendance` ahora incluye supervisors
+
+### 3. ❌ No se puede crear usuario nuevo
+**Causa:** Faltaban políticas INSERT  
+**Solución:** ✅ Políticas `supervisors_create_workers` y `managers_create_users` agregadas
+
+### 4. ❌ Worker no puede cambiar foto/teléfono
+**Causa:** Validación demasiado estricta  
+**Solución:** ✅ Política `workers_update_own_profile` mejorada
+
+### 5. ❌ Columna `average_check_in_time` no existe
+**Causa:** Faltaba en schema original  
+**Solución:** ✅ Columna agregada en `01_SCHEMA_BASE.sql`
+
+---
+
+## 📊 Función de Score Ponderado
+
+### Fórmula
+```
+Score Total = (Ventas × 0.40) + (Puntualidad × 0.35) + (Asistencia × 0.25)
+```
+
+### Uso Manual
+```sql
+-- Calcular score de un usuario específico
+SELECT calculate_weighted_attendance_score(
+  'UUID_DEL_USUARIO',
+  '2025-11-01'::DATE,
+  '2025-11-30'::DATE
+);
+
+-- Actualizar todas las métricas
+SELECT update_performance_metrics_with_weighted_score();
+```
 
 ---
 
@@ -154,6 +235,17 @@ INSERT INTO public.users (
   'UUID_DEL_SUPERVISOR',  -- Asignar al supervisor
   true
 );
+
+-- ⚠️ IMPORTANTE: Creación de Usuarios desde la App
+-- =====================================================
+-- Cuando creas usuarios desde Flutter, el sistema ahora:
+-- 1️⃣ Crea el usuario en Supabase Auth (con password temporal)
+-- 2️⃣ Crea el registro en la tabla users
+-- 3️⃣ El usuario aparecerá en Authentication > Users
+-- 
+-- Password temporal: Se genera automáticamente (8 caracteres)
+-- El usuario debe cambiar su password en el primer login
+-- =====================================================
 
 -- Insertar datos de asistencia de ejemplo (últimos 7 días)
 INSERT INTO public.attendance (

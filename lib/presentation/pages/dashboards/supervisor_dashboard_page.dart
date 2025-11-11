@@ -36,6 +36,13 @@ class _SupervisorDashboardPageState
         backgroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.people_alt),
+            tooltip: 'Asistencia del Equipo',
+            onPressed: () {
+              Navigator.pushNamed(context, '/team-attendance');
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.file_download),
             onPressed: () {
               Navigator.pushNamed(context, '/reports');
@@ -165,10 +172,37 @@ class _SupervisorDashboardPageState
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _generateTeamSummary(),
-        icon: const Icon(Icons.auto_awesome),
-        label: const Text('Análisis IA'),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Botón para registrar asistencia
+          FloatingActionButton(
+            heroTag: 'check_in',
+            onPressed: () {
+              Navigator.pushNamed(context, '/check-in');
+            },
+            backgroundColor: Colors.blue,
+            child: const Icon(Icons.check_circle),
+          ),
+          const SizedBox(height: 12),
+          // Botón para agregar trabajadores
+          FloatingActionButton(
+            heroTag: 'add_worker',
+            onPressed: () {
+              Navigator.pushNamed(context, '/users');
+            },
+            backgroundColor: Colors.green,
+            child: const Icon(Icons.person_add),
+          ),
+          const SizedBox(height: 12),
+          // Botón para análisis IA
+          FloatingActionButton(
+            heroTag: 'ai_analysis',
+            onPressed: () => _generateTeamSummary(),
+            backgroundColor: Colors.purple,
+            child: const Icon(Icons.auto_awesome),
+          ),
+        ],
       ),
     );
   }
@@ -303,6 +337,18 @@ class _SupervisorDashboardPageState
   }
 
   Widget _buildTeamPerformanceChart() {
+    // Get weekly performance data from provider
+    final weekStart = DateTime.now().subtract(
+      Duration(days: DateTime.now().weekday - 1),
+    );
+    final weeklyRange = DateRange(
+      startDate: weekStart,
+      endDate: DateTime.now(),
+    );
+    final teamMetricsAsync = ref.watch(
+      teamPerformanceMetricsProvider(weeklyRange),
+    );
+
     return Card(
       elevation: 2,
       child: Padding(
@@ -317,72 +363,172 @@ class _SupervisorDashboardPageState
             const SizedBox(height: 20),
             SizedBox(
               height: 200,
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    horizontalInterval: 20,
-                    getDrawingHorizontalLine: (value) {
-                      return FlLine(color: Colors.grey[200], strokeWidth: 1);
-                    },
-                  ),
-                  titlesData: FlTitlesData(
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (value, meta) {
-                          const days = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-                          return Text(
-                            days[value.toInt() % 7],
-                            style: const TextStyle(fontSize: 12),
-                          );
-                        },
+              child: teamMetricsAsync.when(
+                data: (metrics) {
+                  // Verificar si no hay métricas o todos los scores son 0
+                  if (metrics.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.bar_chart_outlined,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No hay datos esta semana',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Los datos aparecerán cuando tu equipo\nregistre asistencia y ventas',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 40,
-                        getTitlesWidget: (value, meta) {
-                          return Text(
-                            value.toInt().toString(),
-                            style: const TextStyle(fontSize: 10),
-                          );
-                        },
+                    );
+                  }
+
+                  // Calculate daily averages
+                  final dailyScores = <FlSpot>[];
+                  bool hasData = false;
+
+                  for (int i = 0; i < 7; i++) {
+                    final day = weekStart.add(Duration(days: i));
+                    final dayMetrics = metrics.where(
+                      (m) =>
+                          m.periodEnd.day == day.day &&
+                          m.periodEnd.month == day.month &&
+                          m.periodEnd.year == day.year,
+                    );
+
+                    if (dayMetrics.isNotEmpty) {
+                      final avg =
+                          dayMetrics
+                              .map((m) => m.attendanceScore)
+                              .reduce((a, b) => a + b) /
+                          dayMetrics.length;
+                      dailyScores.add(FlSpot(i.toDouble(), avg.toDouble()));
+                      if (avg > 0) hasData = true;
+                    } else {
+                      dailyScores.add(FlSpot(i.toDouble(), 0));
+                    }
+                  }
+
+                  // Si no hay datos reales, mostrar mensaje
+                  if (!hasData) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.insert_chart_outlined,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Sin actividad registrada',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Agrega asistencia y ventas para ver el gráfico',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: const [
-                        FlSpot(0, 75),
-                        FlSpot(1, 80),
-                        FlSpot(2, 78),
-                        FlSpot(3, 85),
-                        FlSpot(4, 82),
-                        FlSpot(5, 88),
-                        FlSpot(6, 90),
-                      ],
-                      isCurved: true,
-                      color: Colors.blue,
-                      barWidth: 3,
-                      dotData: const FlDotData(show: true),
-                      belowBarData: BarAreaData(
+                    );
+                  }
+
+                  return LineChart(
+                    LineChartData(
+                      gridData: FlGridData(
                         show: true,
-                        color: Colors.blue.withValues(alpha: 0.1),
+                        drawVerticalLine: false,
+                        horizontalInterval: 20,
+                        getDrawingHorizontalLine: (value) {
+                          return FlLine(
+                            color: Colors.grey[200],
+                            strokeWidth: 1,
+                          );
+                        },
                       ),
+                      titlesData: FlTitlesData(
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (value, meta) {
+                              const days = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+                              return Text(
+                                days[value.toInt() % 7],
+                                style: const TextStyle(fontSize: 12),
+                              );
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            getTitlesWidget: (value, meta) {
+                              return Text(
+                                value.toInt().toString(),
+                                style: const TextStyle(fontSize: 10),
+                              );
+                            },
+                          ),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: dailyScores,
+                          isCurved: true,
+                          color: Colors.blue,
+                          barWidth: 3,
+                          dotData: const FlDotData(show: true),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: Colors.blue.withValues(alpha: 0.1),
+                          ),
+                        ),
+                      ],
+                      minY: 0,
+                      maxY: 100,
                     ),
-                  ],
-                  minY: 60,
-                  maxY: 100,
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Text(
+                    'Error al cargar gráfica',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
                 ),
               ),
             ),
@@ -671,54 +817,177 @@ class _SupervisorDashboardPageState
   }
 
   Future<void> _generateTeamSummary() async {
+    // Mostrar loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Generando análisis del equipo...'),
+                SizedBox(height: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.auto_awesome, size: 16, color: Colors.orange),
+                    SizedBox(width: 4),
+                    Text(
+                      'Powered by Google Gemini',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
     // Get real team metrics from provider
     final dateRange = DateRange.currentMonth();
     final teamMetricsAsync = ref.read(
       teamPerformanceMetricsProvider(dateRange),
     );
 
-    teamMetricsAsync.when(
+    await teamMetricsAsync.when(
       data: (teamMetrics) async {
         if (teamMetrics.isEmpty) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('No hay datos del equipo disponibles'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
+          if (!mounted) return;
+          Navigator.pop(context); // Cerrar loading
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No hay datos del equipo disponibles'),
+              backgroundColor: Colors.orange,
+            ),
+          );
           return;
         }
 
-        final summary = await ref
-            .read(aiCoachingProvider.notifier)
-            .generateTeamSummary(teamMetrics: teamMetrics, language: 'es');
+        try {
+          final summary = await ref
+              .read(aiCoachingProvider.notifier)
+              .generateTeamSummary(teamMetrics: teamMetrics, language: 'es');
 
-        if (summary != null && mounted) {
-          // Update state to show in card
-          setState(() {});
-        }
-      },
-      loading: () {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Cargando métricas del equipo...'),
-              duration: Duration(seconds: 1),
-            ),
-          );
-        }
-      },
-      error: (error, stack) {
-        if (mounted) {
+          if (!mounted) return;
+
+          // Cerrar loading
+          Navigator.pop(context);
+
+          if (summary != null) {
+            // Mostrar resultados en diálogo
+            await showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                backgroundColor: Colors.transparent,
+                contentPadding: EdgeInsets.zero,
+                content: Container(
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue.shade400, Colors.teal.shade400],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.analytics, color: Colors.white, size: 28),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Análisis del Equipo',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 400),
+                        child: SingleChildScrollView(
+                          child: Text(
+                            summary,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.blue,
+                            ),
+                            child: const Text('Entendido'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          } else {
+            throw Exception('No se generó ningún análisis');
+          }
+        } catch (e) {
+          if (!mounted) return;
+          Navigator.pop(context); // Cerrar loading
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error al cargar métricas: $error'),
+              content: Text('Error al generar análisis: $e'),
               backgroundColor: Colors.red,
             ),
           );
         }
+      },
+      loading: () {
+        if (!mounted) return;
+        Navigator.pop(context);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cargando métricas del equipo...'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      },
+      error: (error, stack) {
+        if (!mounted) return;
+        Navigator.pop(context);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar métricas: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
       },
     );
   }

@@ -25,14 +25,20 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   File? _selectedImage;
   bool _isSaving = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -106,17 +112,15 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     setState(() => _isSaving = true);
 
     try {
-      final updates = <String, dynamic>{};
-
-      // Actualizar nombre si cambió
-      if (_nameController.text.trim() != currentUser.fullName) {
-        updates['full_name'] = _nameController.text.trim();
-      }
-
       // Actualizar teléfono si cambió
       final phone = _phoneController.text.trim().isEmpty
           ? null
           : _phoneController.text.trim();
+
+      // Actualizar contraseña si se proporcionó
+      final newPassword = _passwordController.text.trim().isEmpty
+          ? null
+          : _passwordController.text.trim();
 
       // Usar updateUserProvider con todos los parámetros
       final updateUser = ref.read(updateUserProvider);
@@ -126,6 +130,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             ? _nameController.text.trim()
             : null,
         phone: phone != currentUser.phone ? phone : null,
+        newPassword: newPassword, // Incluir nueva contraseña
         newPhotoFile: _selectedImage,
       );
 
@@ -214,8 +219,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                         children: [
                           CircleAvatar(
                             radius: 60,
-                            backgroundColor: AppTheme.primaryBlue.withOpacity(
-                              0.1,
+                            backgroundColor: AppTheme.primaryBlue.withValues(
+                              alpha: 0.1,
                             ),
                             backgroundImage: _selectedImage != null
                                 ? FileImage(_selectedImage!)
@@ -301,6 +306,107 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                       if (value != null && value.isNotEmpty) {
                         if (value.length < 8) {
                           return 'El teléfono debe tener al menos 8 dígitos';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Divider para separar sección de contraseña
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.lock_outline,
+                        size: 20,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Cambiar Contraseña (Opcional)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Deja estos campos vacíos si no deseas cambiar la contraseña',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Nueva contraseña
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'Nueva Contraseña',
+                      prefixIcon: const Icon(Icons.lock),
+                      hintText: 'Mínimo 6 caracteres',
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() => _obscurePassword = !_obscurePassword);
+                        },
+                      ),
+                    ),
+                    validator: (value) {
+                      // Solo validar si se ingresó algo
+                      if (value != null && value.isNotEmpty) {
+                        if (value.length < 6) {
+                          return 'La contraseña debe tener al menos 6 caracteres';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Confirmar contraseña
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirmPassword,
+                    decoration: InputDecoration(
+                      labelText: 'Confirmar Contraseña',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(
+                            () => _obscureConfirmPassword =
+                                !_obscureConfirmPassword,
+                          );
+                        },
+                      ),
+                    ),
+                    validator: (value) {
+                      // Solo validar si se ingresó una contraseña nueva
+                      if (_passwordController.text.isNotEmpty) {
+                        if (value == null || value.isEmpty) {
+                          return 'Confirma la nueva contraseña';
+                        }
+                        if (value != _passwordController.text) {
+                          return 'Las contraseñas no coinciden';
                         }
                       }
                       return null;

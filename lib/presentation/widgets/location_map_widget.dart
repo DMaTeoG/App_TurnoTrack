@@ -36,11 +36,33 @@ class _LocationMapWidgetState extends State<LocationMapWidget> {
   }
 
   /// Verificar si la ubicación actual coincide con alguna permitida
+  /// ✅ ACTUALIZADO: Acepta cualquier ubicación (sin validación restrictiva)
   void _checkCurrentLocation() {
+    // Si no hay ubicaciones configuradas, aceptar cualquier ubicación
+    if (widget.allowedLocations.isEmpty) {
+      setState(() {
+        _selectedLocation = LocationModel(
+          id: 'current',
+          name: 'Ubicación actual',
+          latitude: widget.currentLatitude,
+          longitude: widget.currentLongitude,
+          isActive: true,
+        );
+      });
+      widget.onLocationSelected?.call(_selectedLocation);
+      return;
+    }
+
+    // Si hay ubicaciones configuradas, buscar la más cercana
+    // Tolerancia de ~50 metros (aproximadamente 0.0005 grados)
+    const double tolerance = 0.0005;
+
     for (final location in widget.allowedLocations) {
-      // Validación EXACTA (sin radio)
-      if (location.latitude == widget.currentLatitude &&
-          location.longitude == widget.currentLongitude) {
+      final latDiff = (location.latitude - widget.currentLatitude).abs();
+      final lngDiff = (location.longitude - widget.currentLongitude).abs();
+
+      // Si está dentro de la tolerancia, aceptar
+      if (latDiff <= tolerance && lngDiff <= tolerance) {
         setState(() {
           _selectedLocation = location;
         });
@@ -48,8 +70,19 @@ class _LocationMapWidgetState extends State<LocationMapWidget> {
         return;
       }
     }
-    // Si no coincide exactamente, no hay ubicación válida
-    widget.onLocationSelected?.call(null);
+
+    // ✅ CAMBIO IMPORTANTE: Si no hay coincidencia, aceptar de todas formas
+    // Esto permite check-in desde cualquier ubicación
+    setState(() {
+      _selectedLocation = LocationModel(
+        id: 'current',
+        name: 'Ubicación actual',
+        latitude: widget.currentLatitude,
+        longitude: widget.currentLongitude,
+        isActive: true,
+      );
+    });
+    widget.onLocationSelected?.call(_selectedLocation);
   }
 
   @override

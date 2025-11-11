@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/animated_widgets.dart';
+import '../../providers/auth_provider.dart';
 import 'widgets/user_form_widget.dart';
 import 'widgets/success_animation_widget.dart';
 
@@ -80,6 +81,7 @@ class _CreateUserPageState extends ConsumerState<CreateUserPage>
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.userId != null;
+    final currentUser = ref.watch(authStateProvider).value;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -139,6 +141,7 @@ class _CreateUserPageState extends ConsumerState<CreateUserPage>
                     index: 0,
                     child: UserFormWidget(
                       userId: widget.userId,
+                      currentUserRole: currentUser?.role,
                       onSuccess: _onUserCreated,
                     ),
                   ),

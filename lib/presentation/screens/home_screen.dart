@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/attendance_provider.dart';
+import '../providers/sales_provider.dart';
+import '../providers/ai_coaching_provider.dart';
+import '../providers/analytics_provider.dart'; // Contiene DateRange y userPerformanceMetricsProvider
 import '../../core/widgets/animated_widgets.dart';
 import '../pages/ranking/ranking_page.dart';
 import '../pages/dashboards/worker_dashboard_page.dart';
@@ -50,6 +53,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         .read(attendanceProvider.notifier)
         .hasCheckedInToday;
 
+    // Obtener nombre real del usuario
+    final firstName = user.fullName?.split(' ').first ?? 'Usuario';
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -64,7 +70,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Hola, Juan',
+                    'Hola, $firstName',
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -147,8 +153,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 _buildRecentActivity(theme),
                 const SizedBox(height: 24),
 
-                // AI Recommendations
-                _buildAIRecommendations(theme),
+                // AI Recommendations - Botón para generar bajo demanda
+                _buildAIRecommendationsButton(theme),
               ]),
             ),
           ),
@@ -186,7 +192,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    hasCheckedIn ? 'Entrada Registrada' : 'Registra tu Entrada',
+                    'Registra tu Entrada',
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -194,17 +200,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    hasCheckedIn
-                        ? '8:30 AM - Hace 2 horas'
-                        : 'Toma una foto para comenzar',
+                    'Toma una foto para comenzar',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
                 ],
               ),
-              Icon(
-                hasCheckedIn ? Icons.check_circle : Icons.camera_alt_outlined,
+              const Icon(
+                Icons.camera_alt_outlined,
                 color: Colors.white,
                 size: 40,
               ),
@@ -225,10 +229,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(hasCheckedIn ? Icons.logout : Icons.camera_alt),
-                  const SizedBox(width: 8),
-                  Text(hasCheckedIn ? 'Registrar Salida' : 'Registrar Entrada'),
+                children: const [
+                  Icon(Icons.camera_alt),
+                  SizedBox(width: 8),
+                  Text('Registrar Entrada'),
                 ],
               ),
             ),
@@ -239,6 +243,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildQuickStats(ThemeData theme) {
+    final user = ref.watch(currentUserProvider).value;
+
+    if (user == null) {
+      return const SizedBox.shrink();
+    }
+
+    // Obtener datos reales - solo ventas por ahora
+    final salesStatsAsync = ref.watch(salesStatisticsProvider(user.id));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -255,7 +268,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: _buildStatCard(
                 theme,
                 'Asistencias',
-                '22/23',
+                'Sin datos',
                 Icons.calendar_today,
                 Colors.blue,
               ),
@@ -265,7 +278,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: _buildStatCard(
                 theme,
                 'Puntualidad',
-                '95%',
+                'Sin datos',
                 Icons.access_time,
                 Colors.green,
               ),
@@ -279,25 +292,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: _buildStatCard(
                 theme,
                 'Ranking',
-                '#5',
+                'Sin datos',
                 Icons.emoji_events,
                 Colors.orange,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.of(
-                    context,
-                  ).push(SmoothPageRoute(page: const SalesPage()));
-                },
-                child: _buildStatCard(
+              child: salesStatsAsync.when(
+                data: (stats) => GestureDetector(
+                  onTap: () {
+                    Navigator.of(
+                      context,
+                    ).push(SmoothPageRoute(page: const SalesPage()));
+                  },
+                  child: _buildStatCard(
+                    theme,
+                    'Ventas',
+                    stats.totalSales > 0
+                        ? '\$${(stats.totalAmount / 1000).toStringAsFixed(1)}K'
+                        : 'Sin datos',
+                    Icons.trending_up,
+                    Colors.purple,
+                  ),
+                ),
+                loading: () => _buildStatCard(
                   theme,
                   'Ventas',
-                  '\$15.2K',
+                  '...',
                   Icons.trending_up,
                   Colors.purple,
+                ),
+                error: (_, __) => GestureDetector(
+                  onTap: () {
+                    Navigator.of(
+                      context,
+                    ).push(SmoothPageRoute(page: const SalesPage()));
+                  },
+                  child: _buildStatCard(
+                    theme,
+                    'Ventas',
+                    'Sin datos',
+                    Icons.trending_up,
+                    Colors.purple,
+                  ),
                 ),
               ),
             ),
@@ -421,21 +459,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildAIRecommendations(ThemeData theme) {
+  /// Botón para generar consejos IA bajo demanda
+  Widget _buildAIRecommendationsButton(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.purple.shade400, Colors.blue.shade400],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.purple.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_awesome, color: Colors.white),
+              const Icon(Icons.auto_awesome, color: Colors.white, size: 24),
               const SizedBox(width: 8),
               Text(
                 'Consejos IA',
@@ -448,14 +496,225 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Tu puntualidad ha mejorado un 15% este mes. Sigue así para alcanzar el top 3 del ranking.',
+            '¿Quieres recibir consejos personalizados basados en tu rendimiento?',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: Colors.white.withValues(alpha: 0.9),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _showAIRecommendations(),
+              icon: const Icon(Icons.psychology),
+              label: const Text('Generar Consejos'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.purple,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                elevation: 0,
+              ),
             ),
           ),
         ],
       ),
     ).animate().fadeIn(delay: 600.ms).scale(delay: 600.ms);
+  }
+
+  /// Muestra los consejos IA en un diálogo (motivacional, sin presión)
+  Future<void> _showAIRecommendations() async {
+    final user = ref.read(currentUserProvider).value;
+    if (user == null) return;
+
+    // Mostrar loading directamente (el botón YA es la confirmación)
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Generando consejos motivacionales...'),
+                SizedBox(height: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.favorite, size: 16, color: Colors.pink),
+                    SizedBox(width: 4),
+                    Text(
+                      'Powered by Google Gemini',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Obtener métricas del usuario
+    final dateRange = DateRange.currentMonth();
+    final metricsAsync = ref.read(userPerformanceMetricsProvider(dateRange));
+
+    await metricsAsync.when(
+      data: (metrics) async {
+        try {
+          // Llamar a Gemini con tipo MOTIVACIONAL
+          await ref
+              .read(aiCoachingProvider.notifier)
+              .generateAdvice(
+                user: user,
+                metrics: metrics,
+                language: 'es',
+                coachingType: 'motivational', // Tipo motivacional para Home
+              );
+
+          if (!mounted) return;
+
+          // Cerrar loading
+          Navigator.pop(context);
+
+          // Obtener el consejo generado
+          final aiState = ref.read(aiCoachingProvider);
+
+          if (aiState.advice != null) {
+            // Mostrar resultados en diálogo
+            await showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                backgroundColor: Colors.transparent,
+                contentPadding: EdgeInsets.zero,
+                content: Container(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.green.shade400, Colors.teal.shade400],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Consejos Motivacionales',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 400),
+                        child: SingleChildScrollView(
+                          child: Text(
+                            aiState.advice!,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.green,
+                            ),
+                            child: const Text('Entendido'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          } else {
+            throw Exception('No se generó ningún consejo');
+          }
+        } catch (e) {
+          if (!mounted) return;
+          Navigator.pop(context); // Cerrar loading
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al generar consejos: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      loading: () {
+        if (!mounted) return;
+        Navigator.pop(context);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cargando métricas...'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      },
+      error: (error, _) async {
+        if (!mounted) return;
+        Navigator.pop(context); // Cerrar loading
+
+        // Mostrar mensaje motivacional genérico
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.lightbulb_outline, color: Colors.blue),
+                SizedBox(width: 8),
+                Text('Consejo del Día'),
+              ],
+            ),
+            content: const Text(
+              '¡Hoy es un buen día para dar lo mejor de ti! 💫\n\n'
+              'Recuerda: la puntualidad y la constancia son clave para el éxito.',
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Entendido'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildBottomNav(ThemeData theme) {
@@ -500,21 +759,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         setState(() => _selectedIndex = index);
         final user = ref.read(authNotifierProvider).value;
 
+        if (user == null) return;
+
         // Navigate to sales page
-        if (index == 1 && user != null) {
+        if (index == 1) {
           Navigator.of(context).push(SmoothPageRoute(page: const SalesPage()));
         }
         // Navigate to ranking page
-        if (index == 2 && user != null) {
+        else if (index == 2) {
           Navigator.of(
             context,
           ).push(SmoothPageRoute(page: RankingPage(currentUser: user)));
         }
         // Navigate to stats (worker dashboard)
-        if (index == 3 && user != null) {
+        else if (index == 3) {
           Navigator.of(
             context,
           ).push(SmoothPageRoute(page: WorkerDashboardPage(user: user)));
+        }
+        // Navigate to profile/settings
+        else if (index == 4) {
+          Navigator.of(context).pushNamed('/settings');
         }
       },
       child: AnimatedContainer(

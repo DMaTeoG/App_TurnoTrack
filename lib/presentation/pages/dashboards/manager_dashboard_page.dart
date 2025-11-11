@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/models/user_model.dart';
 import '../../providers/analytics_provider.dart';
+import '../../providers/ai_coaching_provider.dart';
 
 /// Dashboard for Manager role - Organization-wide KPIs and insights
 class ManagerDashboardPage extends ConsumerStatefulWidget {
@@ -30,6 +31,13 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
         elevation: 0,
         backgroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.people_alt),
+            tooltip: 'Asistencia del Equipo',
+            onPressed: () {
+              Navigator.pushNamed(context, '/team-attendance');
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.file_download),
             onPressed: () {
@@ -357,12 +365,16 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Tendencia de Asistencia',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                const Expanded(
+                  child: Text(
+                    'Tendencia de Asistencia',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                const SizedBox(width: 8),
                 trendAsync.when(
                   data: (trends) {
                     if (trends.isEmpty) return const SizedBox.shrink();
@@ -374,24 +386,28 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                         lastTwo.last.punctualityRate >
                             lastTwo.first.punctualityRate;
 
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: (isPositive ? Colors.green : Colors.orange)
-                            .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        isPositive
-                            ? '↑ Tendencia positiva'
-                            : '↓ Tendencia negativa',
-                        style: TextStyle(
-                          color: isPositive ? Colors.green : Colors.orange,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                    return Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (isPositive ? Colors.green : Colors.orange)
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          isPositive
+                              ? '↑ Tendencia positiva'
+                              : '↓ Tendencia negativa',
+                          style: TextStyle(
+                            color: isPositive ? Colors.green : Colors.orange,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     );
@@ -813,12 +829,18 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
 
                 return Column(
                   children: supervisors.map((supervisor) {
+                    final hasTeam = supervisor.teamSize > 0;
+                    final scoreText = hasTeam
+                        ? supervisor.avgScore.toStringAsFixed(1)
+                        : 'N/A';
+                    final scoreColor = hasTeam ? Colors.green : Colors.grey;
+
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       color: Colors.grey[50],
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: Colors.blue,
+                          backgroundColor: hasTeam ? Colors.blue : Colors.grey,
                           child: Text(
                             supervisor.name[0].toUpperCase(),
                             style: const TextStyle(color: Colors.white),
@@ -826,7 +848,13 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                         ),
                         title: Text(supervisor.name),
                         subtitle: Text(
-                          '${supervisor.teamSize} personas en equipo',
+                          hasTeam
+                              ? '${supervisor.teamSize} personas en equipo'
+                              : 'Sin equipo asignado',
+                          style: TextStyle(
+                            color: hasTeam ? null : Colors.grey[600],
+                            fontStyle: hasTeam ? null : FontStyle.italic,
+                          ),
                         ),
                         trailing: Container(
                           padding: const EdgeInsets.symmetric(
@@ -834,13 +862,13 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.1),
+                            color: scoreColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            supervisor.avgScore.toStringAsFixed(1),
-                            style: const TextStyle(
-                              color: Colors.green,
+                            scoreText,
+                            style: TextStyle(
+                              color: scoreColor,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1162,109 +1190,33 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     );
   }
 
-  /// Generate attendance predictions using AI
-  String _generatePredictionFromKPIs({
-    required int totalCheckIns,
-    required int lateCheckIns,
-    required double punctualityRate,
-    required double avgScore,
-  }) {
-    final StringBuffer prediction = StringBuffer();
-
-    prediction.writeln('📊 **Análisis de Asistencia**\n');
-
-    // Análisis de puntualidad
-    if (punctualityRate >= 90) {
-      prediction.writeln(
-        '✅ **Excelente puntualidad** (${punctualityRate.toStringAsFixed(1)}%)',
-      );
-      prediction.writeln('El equipo mantiene un alto nivel de puntualidad.\n');
-    } else if (punctualityRate >= 70) {
-      prediction.writeln(
-        '⚠️ **Puntualidad aceptable** (${punctualityRate.toStringAsFixed(1)}%)',
-      );
-      prediction.writeln(
-        'Hay margen de mejora. Considera recordatorios automáticos.\n',
-      );
-    } else {
-      prediction.writeln(
-        '🚨 **Alerta de puntualidad** (${punctualityRate.toStringAsFixed(1)}%)',
-      );
-      prediction.writeln(
-        'Requiere atención inmediata. Revisa políticas y comunicación.\n',
-      );
-    }
-
-    // Análisis de llegadas tardías
-    final latePercentage = totalCheckIns > 0
-        ? (lateCheckIns / totalCheckIns * 100)
-        : 0.0;
-    if (latePercentage > 20) {
-      prediction.writeln(
-        '📉 **Alto índice de retrasos** (${latePercentage.toStringAsFixed(1)}%)',
-      );
-      prediction.writeln(
-        'Sugerencia: Analizar causas comunes (transporte, horarios).\n',
-      );
-    } else if (latePercentage > 10) {
-      prediction.writeln(
-        '📊 Retrasos moderados (${latePercentage.toStringAsFixed(1)}%)',
-      );
-      prediction.writeln('Monitorear tendencia en próximas semanas.\n');
-    }
-
-    // Análisis de desempeño general
-    if (avgScore >= 4.0) {
-      prediction.writeln(
-        '⭐ **Desempeño sobresaliente** (${avgScore.toStringAsFixed(1)}/5.0)',
-      );
-    } else if (avgScore >= 3.0) {
-      prediction.writeln(
-        '✔️ Desempeño adecuado (${avgScore.toStringAsFixed(1)}/5.0)',
-      );
-    } else if (avgScore > 0) {
-      prediction.writeln(
-        '⚠️ Desempeño bajo (${avgScore.toStringAsFixed(1)}/5.0)',
-      );
-      prediction.writeln('Considera planes de mejora individualizados.');
-    }
-
-    // Recomendaciones generales
-    prediction.writeln('\n💡 **Recomendaciones:**');
-    if (punctualityRate < 85) {
-      prediction.writeln(
-        '• Implementar sistema de notificaciones previas al turno',
-      );
-    }
-    if (latePercentage > 15) {
-      prediction.writeln(
-        '• Revisar y ajustar horarios según necesidades del equipo',
-      );
-    }
-    prediction.writeln('• Mantener comunicación constante con supervisores');
-    prediction.writeln(
-      '• Reconocer y recompensar buenos hábitos de asistencia',
-    );
-
-    return prediction.toString();
-  }
-
   Future<void> _generateAttendancePredictions() async {
-    // Show loading dialog immediately
-    if (!mounted) return;
+    // Mostrar loading directamente (sin confirmación doble)
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(
         child: Card(
           child: Padding(
-            padding: EdgeInsets.all(20),
+            padding: EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text('Generando predicciones con IA...'),
+                Text('Generando análisis estratégico...'),
+                SizedBox(height: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.auto_awesome, size: 16, color: Colors.orange),
+                    SizedBox(width: 4),
+                    Text(
+                      'Powered by Google Gemini',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -1273,108 +1225,133 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     );
 
     try {
-      // Obtener KPIs para generar predicción basada en datos reales
+      // Obtener KPIs organizacionales
       final dateRange = DateRange.lastWeek();
       final kpis = await ref.read(organizationKPIsProvider(dateRange).future);
 
-      final totalCheckIns = kpis['total_check_ins'] as int? ?? 0;
-      final lateCheckIns = kpis['late_check_ins'] as int? ?? 0;
-      final punctualityRate =
-          (kpis['punctuality_rate'] as num?)?.toDouble() ?? 0.0;
-      final avgScore =
-          (kpis['avg_attendance_score'] as num?)?.toDouble() ?? 0.0;
+      // Llamar a Gemini con análisis estratégico para Manager
+      final insights = await ref
+          .read(aiCoachingProvider.notifier)
+          .generateManagerInsights(organizationKPIs: kpis, language: 'es');
 
       if (!mounted) return;
-      Navigator.pop(context); // Close loading dialog
 
-      // Generar predicción simple basada en los KPIs
-      final prediction = _generatePredictionFromKPIs(
-        totalCheckIns: totalCheckIns,
-        lateCheckIns: lateCheckIns,
-        punctualityRate: punctualityRate,
-        avgScore: avgScore,
-      );
+      // Cerrar loading
+      Navigator.pop(context);
 
-      // Show predictions dialog
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.psychology, color: Colors.purple),
-              SizedBox(width: 8),
-              Text('Predicciones IA'),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  prediction,
-                  style: const TextStyle(fontSize: 15, height: 1.5),
+      if (insights != null) {
+        // Mostrar resultados en diálogo ejecutivo
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: Colors.transparent,
+            contentPadding: EdgeInsets.zero,
+            content: Container(
+              constraints: const BoxConstraints(maxWidth: 500),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.deepPurple.shade400, Colors.indigo.shade400],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Row(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.blue, size: 20),
-                      SizedBox(width: 8),
+                      Icon(
+                        Icons.business_center,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Análisis basado en datos de la última semana',
-                          style: TextStyle(fontSize: 12, color: Colors.blue),
+                          'Análisis Estratégico',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.trending_up, color: Colors.white, size: 14),
+                        SizedBox(width: 4),
+                        Text(
+                          'C-Level Insights',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 400),
+                    child: SingleChildScrollView(
+                      child: Text(
+                        insights,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.check_circle),
+                        label: const Text('Entendido'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.deepPurple,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cerrar'),
-            ),
-          ],
-        ),
-      );
+        );
+      } else {
+        throw Exception('No se generó ningún análisis');
+      }
     } catch (e) {
       if (!mounted) return;
-      Navigator.pop(context); // Close loading dialog
+      Navigator.pop(context); // Cerrar loading
 
-      // Mostrar error detallado
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: ${e.toString()}'),
+          content: Text('Error al generar análisis: $e'),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
-          action: SnackBarAction(
-            label: 'Ver',
-            textColor: Colors.white,
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Error Detallado'),
-                  content: SingleChildScrollView(child: Text(e.toString())),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cerrar'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
         ),
       );
     }

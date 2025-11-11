@@ -50,6 +50,7 @@ dependencies:
   # Maps - OpenStreetMap
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
+  url_launcher: ^6.3.1
   # Images & Media
   image_picker: ^1.0.7
   image: ^4.1.7

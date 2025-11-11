@@ -551,21 +551,153 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
   }
 
   Future<void> _generateAIAdvice() async {
+    // Mostrar loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Generando consejos con IA...'),
+                SizedBox(height: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.auto_awesome, size: 16, color: Colors.orange),
+                    SizedBox(width: 4),
+                    Text(
+                      'Powered by Google Gemini',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
     // Get real metrics from provider
     final dateRange = DateRange.currentMonth();
     final metricsAsync = ref.read(userPerformanceMetricsProvider(dateRange));
 
-    metricsAsync.when(
+    await metricsAsync.when(
       data: (metrics) async {
-        await ref
-            .read(aiCoachingProvider.notifier)
-            .generateAdvice(
-              user: widget.user,
-              metrics: metrics,
-              language: 'es',
+        try {
+          await ref
+              .read(aiCoachingProvider.notifier)
+              .generateAdvice(
+                user: widget.user,
+                metrics: metrics,
+                language: 'es',
+                coachingType:
+                    'competitive', // Análisis competitivo para Dashboard
+              );
+
+          if (!mounted) return;
+
+          // Cerrar loading
+          Navigator.pop(context);
+
+          // Obtener el consejo generado
+          final aiState = ref.read(aiCoachingProvider);
+
+          if (aiState.advice != null) {
+            // Mostrar resultados en diálogo
+            await showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                backgroundColor: Colors.transparent,
+                contentPadding: EdgeInsets.zero,
+                content: Container(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.purple.shade400, Colors.blue.shade400],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.psychology, color: Colors.white, size: 28),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Consejos IA',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 400),
+                        child: SingleChildScrollView(
+                          child: Text(
+                            aiState.advice!,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.purple,
+                            ),
+                            child: const Text('Entendido'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             );
+          } else {
+            throw Exception('No se generó ningún consejo');
+          }
+        } catch (e) {
+          if (!mounted) return;
+          Navigator.pop(context); // Cerrar loading
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al generar consejos: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       },
       loading: () {
+        if (!mounted) return;
+        Navigator.pop(context);
         // Show loading indicator
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

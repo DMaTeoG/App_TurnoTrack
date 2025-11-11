@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/utils/app_logger.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/analytics_repository_impl.dart';
 import '../../domain/repositories/i_analytics_repository.dart';
@@ -13,7 +14,9 @@ final analyticsRepositoryProvider = Provider<IAnalyticsRepository>((ref) {
 // Provider de métricas de rendimiento del usuario actual
 final userPerformanceMetricsProvider = FutureProvider.autoDispose
     .family<PerformanceMetrics, DateRange>((ref, dateRange) async {
-      final user = ref.watch(authNotifierProvider).value;
+      final authState = ref.read(authNotifierProvider);
+      final user = authState.value;
+
       if (user == null) {
         throw Exception('Usuario no autenticado');
       }
@@ -29,23 +32,51 @@ final userPerformanceMetricsProvider = FutureProvider.autoDispose
 // Provider de métricas del equipo (para supervisores)
 final teamPerformanceMetricsProvider = FutureProvider.autoDispose
     .family<List<PerformanceMetrics>, DateRange>((ref, dateRange) async {
-      final user = ref.watch(authNotifierProvider).value;
-      if (user == null || user.role != 'supervisor') {
+      // Usar read en lugar de watch para evitar rebuilds infinitos
+      final authState = ref.read(authNotifierProvider);
+      final user = authState.value;
+
+      if (user == null) {
         return [];
       }
 
-      final repository = ref.read(analyticsRepositoryProvider);
-      return await repository.getTeamPerformance(
-        supervisorId: user.id,
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate,
-      );
+      // Si no es supervisor ni manager, retornar vacío
+      if (user.role != 'supervisor' && user.role != 'manager') {
+        return [];
+      }
+
+      try {
+        final repository = ref.read(analyticsRepositoryProvider);
+
+        // Agregar timeout para evitar espera infinita
+        final result = await repository
+            .getTeamPerformance(
+              supervisorId: user.id,
+              startDate: dateRange.startDate,
+              endDate: dateRange.endDate,
+            )
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                // Si timeout, retornar lista vacía en lugar de error
+                return <PerformanceMetrics>[];
+              },
+            );
+
+        return result;
+      } catch (e) {
+        // En caso de error, retornar lista vacía
+        AppLogger.error('Error loading team performance', e);
+        return [];
+      }
     });
 
 // Provider de KPIs organizacionales (para managers)
 final organizationKPIsProvider = FutureProvider.autoDispose
     .family<Map<String, dynamic>, DateRange>((ref, dateRange) async {
-      final user = ref.watch(authNotifierProvider).value;
+      final authState = ref.read(authNotifierProvider);
+      final user = authState.value;
+
       if (user == null || user.role != 'manager') {
         return {};
       }
@@ -172,15 +203,20 @@ final attendanceTrendProvider =
           endDate: nextMonth.subtract(const Duration(days: 1)),
         );
 
-        result.add(
-          MonthlyAttendance(
-            month: month,
-            attendanceRate:
-                (kpis['punctuality_rate'] as num?)?.toDouble() ?? 0.0,
-            punctualityRate:
-                (kpis['punctuality_rate'] as num?)?.toDouble() ?? 0.0,
-          ),
-        );
+        // Solo agregar meses con datos reales (al menos 1 check-in)
+        final totalCheckIns = (kpis['total_check_ins'] as int?) ?? 0;
+
+        if (totalCheckIns > 0) {
+          result.add(
+            MonthlyAttendance(
+              month: month,
+              attendanceRate:
+                  (kpis['avg_attendance_score'] as num?)?.toDouble() ?? 0.0,
+              punctualityRate:
+                  (kpis['punctuality_rate'] as num?)?.toDouble() ?? 0.0,
+            ),
+          );
+        }
       }
 
       return result;
@@ -219,12 +255,53 @@ final performanceDistributionProvider =
         );
       }
 
-      // TODO: Implementar consulta real a performance_metrics para obtener distribución
-      return PerformanceDistribution(
-        excellent: 0,
-        good: 0,
-        needsImprovement: 0,
-      );
+      // Consultar distribución real desde performance_metrics
+      final datasource = ref.read(supabaseDatasourceProvider);
+
+      try {
+        // Obtener métricas de todos los usuarios activos en el período
+        final response = await datasource.client
+            .from('performance_metrics')
+            .select('attendance_score')
+            .gte('period_start', dateRange.startDate.toIso8601String())
+            .lte('period_end', dateRange.endDate.toIso8601String());
+
+        if (response.isEmpty) {
+          return PerformanceDistribution(
+            excellent: 0,
+            good: 0,
+            needsImprovement: 0,
+          );
+        }
+
+        int excellent = 0;
+        int good = 0;
+        int needsImprovement = 0;
+
+        for (final metric in response) {
+          final score = (metric['attendance_score'] as num?)?.toDouble() ?? 0;
+          if (score >= 90) {
+            excellent++;
+          } else if (score >= 70) {
+            good++;
+          } else {
+            needsImprovement++;
+          }
+        }
+
+        return PerformanceDistribution(
+          excellent: excellent,
+          good: good,
+          needsImprovement: needsImprovement,
+        );
+      } catch (e) {
+        AppLogger.error('Error loading performance distribution', e);
+        return PerformanceDistribution(
+          excellent: 0,
+          good: 0,
+          needsImprovement: 0,
+        );
+      }
     });
 
 /// Provider de supervisores y su rendimiento
@@ -235,8 +312,84 @@ final supervisorsPerformanceProvider =
         return [];
       }
 
-      // TODO: Implementar consulta real a users + performance_metrics
-      return [];
+      // Consulta real a users + performance_metrics
+      final datasource = ref.read(supabaseDatasourceProvider);
+
+      try {
+        // Obtener todos los supervisores
+        final supervisorsResponse = await datasource.client
+            .from('users')
+            .select('id, full_name')
+            .eq('role', 'supervisor')
+            .eq('is_active', true);
+
+        if (supervisorsResponse.isEmpty) {
+          return [];
+        }
+
+        final List<SupervisorStats> supervisorStatsList = [];
+
+        for (final supervisor in supervisorsResponse) {
+          final supervisorId = supervisor['id'] as String;
+          final supervisorName = supervisor['full_name'] as String;
+
+          // Contar trabajadores asignados
+          final workersResponse = await datasource.client
+              .from('users')
+              .select('id')
+              .eq('supervisor_id', supervisorId)
+              .eq('is_active', true);
+
+          final teamSize = workersResponse.length;
+
+          // Si no tiene equipo, no agregarlo a la lista
+          if (teamSize == 0) {
+            continue;
+          }
+
+          // Obtener IDs de workers para consultar métricas
+          final workerIds = (workersResponse as List)
+              .map((w) => w['id'] as String)
+              .toList();
+
+          // Obtener promedio de score del equipo
+          final metricsResponse = await datasource.client
+              .from('performance_metrics')
+              .select('attendance_score')
+              .inFilter('user_id', workerIds)
+              .gte(
+                'period_start',
+                DateTime.now()
+                    .subtract(const Duration(days: 30))
+                    .toIso8601String(),
+              );
+
+          double avgScore = 0.0;
+          if (metricsResponse.isNotEmpty) {
+            final scores = (metricsResponse as List)
+                .map((m) => (m['attendance_score'] as num?)?.toDouble() ?? 0.0)
+                .toList();
+            avgScore = scores.reduce((a, b) => a + b) / scores.length;
+          }
+
+          supervisorStatsList.add(
+            SupervisorStats(
+              id: supervisorId,
+              name: supervisorName,
+              teamSize: teamSize,
+              avgScore: avgScore,
+            ),
+          );
+        }
+
+        // Ordenar por score descendente
+        supervisorStatsList.sort((a, b) => b.avgScore.compareTo(a.avgScore));
+
+        return supervisorStatsList;
+      } catch (e) {
+        AppLogger.error('Error loading supervisors performance', e);
+        return [];
+      }
     });
 
 /// Provider de comparativa por área/departamento
@@ -247,8 +400,78 @@ final departmentComparisonProvider =
         return [];
       }
 
-      // TODO: Implementar consulta real agrupando por departamento
-      return [];
+      // Implementación real agrupando por supervisor (como "departamento")
+      final datasource = ref.read(supabaseDatasourceProvider);
+
+      try {
+        // Obtener todos los supervisores como "departamentos"
+        final supervisorsResponse = await datasource.client
+            .from('users')
+            .select('id, full_name')
+            .eq('role', 'supervisor')
+            .eq('is_active', true);
+
+        if (supervisorsResponse.isEmpty) {
+          return [];
+        }
+
+        final List<DepartmentStats> departmentStatsList = [];
+
+        for (final supervisor in supervisorsResponse) {
+          final supervisorId = supervisor['id'] as String;
+          final supervisorName = supervisor['full_name'] as String;
+
+          // Obtener trabajadores del supervisor
+          final workersResponse = await datasource.client
+              .from('users')
+              .select('id')
+              .eq('supervisor_id', supervisorId)
+              .eq('is_active', true);
+
+          if (workersResponse.isEmpty) {
+            departmentStatsList.add(
+              DepartmentStats(department: supervisorName, score: 0),
+            );
+            continue;
+          }
+
+          final workerIds = (workersResponse as List)
+              .map((w) => w['id'] as String)
+              .toList();
+
+          // Obtener score promedio del "departamento"
+          final metricsResponse = await datasource.client
+              .from('performance_metrics')
+              .select('attendance_score')
+              .inFilter('user_id', workerIds)
+              .gte(
+                'period_start',
+                DateTime.now()
+                    .subtract(const Duration(days: 30))
+                    .toIso8601String(),
+              );
+
+          int avgScore = 0;
+          if (metricsResponse.isNotEmpty) {
+            final scores = (metricsResponse as List)
+                .map((m) => (m['attendance_score'] as num?)?.toInt() ?? 0)
+                .toList();
+            avgScore = (scores.reduce((a, b) => a + b) / scores.length).round();
+          }
+
+          departmentStatsList.add(
+            DepartmentStats(department: supervisorName, score: avgScore),
+          );
+        }
+
+        // Ordenar por score descendente
+        departmentStatsList.sort((a, b) => b.score.compareTo(a.score));
+
+        return departmentStatsList;
+      } catch (e) {
+        AppLogger.error('Error loading department comparison', e);
+        return [];
+      }
     });
 
 /// Provider de alertas críticas

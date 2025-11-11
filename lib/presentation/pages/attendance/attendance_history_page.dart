@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/user_model.dart';
 import '../../providers/attendance_provider.dart';
@@ -133,71 +135,51 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
 
           const Divider(height: 32),
 
-          // Mapa Check-in
-          Text(
-            'Ubicación de Entrada',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 200,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: FlutterMap(
-                options: MapOptions(
-                  initialCenter: LatLng(
-                    attendance.checkInLatitude,
-                    attendance.checkInLongitude,
-                  ),
-                  initialZoom: 15,
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.turnotrack.app',
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: LatLng(
-                          attendance.checkInLatitude,
-                          attendance.checkInLongitude,
-                        ),
-                        width: 40,
-                        height: 40,
-                        child: const Icon(
-                          Icons.location_on,
-                          color: Colors.red,
-                          size: 40,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (attendance.checkInAddress != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                attendance.checkInAddress!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-
-          const SizedBox(height: 16),
+          // ===== ENTRADA (CHECK-IN) =====
+          _buildSectionTitle('📍 Entrada', Colors.green),
+          const SizedBox(height: 12),
 
           // Foto Check-in
-          Text(
-            'Foto de Entrada',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          _buildPhotoCard(
+            photoUrl: attendance.checkInPhotoUrl,
+            time: timeFormat.format(attendance.checkInTime),
+            label: 'Foto de entrada',
           ),
+          const SizedBox(height: 12),
+
+          // Mapa y Coordenadas Check-in
+          _buildLocationCard(
+            latitude: attendance.checkInLatitude,
+            longitude: attendance.checkInLongitude,
+            address: attendance.checkInAddress,
+            color: Colors.green,
+          ),
+
+          // ===== SALIDA (CHECK-OUT) =====
+          if (attendance.checkOutTime != null) ...[
+            const Divider(height: 32),
+            _buildSectionTitle('📍 Salida', Colors.orange),
+            const SizedBox(height: 12),
+
+            // Foto Check-out
+            if (attendance.checkOutPhotoUrl != null)
+              _buildPhotoCard(
+                photoUrl: attendance.checkOutPhotoUrl!,
+                time: timeFormat.format(attendance.checkOutTime!),
+                label: 'Foto de salida',
+              ),
+            const SizedBox(height: 12),
+
+            // Mapa y Coordenadas Check-out
+            if (attendance.checkOutLatitude != null &&
+                attendance.checkOutLongitude != null)
+              _buildLocationCard(
+                latitude: attendance.checkOutLatitude!,
+                longitude: attendance.checkOutLongitude!,
+                address: attendance.checkOutAddress,
+                color: Colors.orange,
+              ),
+          ],
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
@@ -347,7 +329,7 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
           // Date range selector
           Container(
             padding: const EdgeInsets.all(16),
-            color: AppTheme.primaryBlue.withOpacity(0.1),
+            color: AppTheme.primaryBlue.withValues(alpha: 0.1),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -518,6 +500,319 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ===== HELPER WIDGETS PARA DETALLE =====
+
+  Widget _buildSectionTitle(String title, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 24,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhotoCard({
+    required String photoUrl,
+    required String time,
+    required String label,
+  }) {
+    return Card(
+      elevation: 2,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Imagen
+          GestureDetector(
+            onTap: () {
+              // Mostrar imagen en pantalla completa
+              showDialog(
+                context: context,
+                builder: (context) => Dialog(
+                  backgroundColor: Colors.black,
+                  insetPadding: EdgeInsets.zero,
+                  child: Stack(
+                    children: [
+                      Center(
+                        child: InteractiveViewer(
+                          child: Image.network(photoUrl, fit: BoxFit.contain),
+                        ),
+                      ),
+                      Positioned(
+                        top: 40,
+                        right: 20,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            child: Stack(
+              children: [
+                Image.network(
+                  photoUrl,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      height: 200,
+                      alignment: Alignment.center,
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 200,
+                      color: Colors.grey.shade200,
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Error al cargar imagen',
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.camera_alt,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          time,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Toca para ampliar',
+                      style: TextStyle(fontSize: 10, color: Colors.black87),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Info
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationCard({
+    required double latitude,
+    required double longitude,
+    String? address,
+    required Color color,
+  }) {
+    return Card(
+      elevation: 2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Mapa
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: SizedBox(
+              height: 200,
+              child: FlutterMap(
+                options: MapOptions(
+                  initialCenter: LatLng(latitude, longitude),
+                  initialZoom: 15,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.turnotrack.app',
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: LatLng(latitude, longitude),
+                        width: 40,
+                        height: 40,
+                        child: Icon(Icons.location_on, color: color, size: 40),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Info
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Coordenadas
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 16,
+                      color: Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'Coordenadas: ${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade700,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                    // Botón para copiar coordenadas
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 16),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        Clipboard.setData(
+                          ClipboardData(text: '$latitude, $longitude'),
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Coordenadas copiadas'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                // Dirección
+                if (address != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.place, size: 16, color: Colors.grey.shade600),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          address,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                // Botón para abrir en Google Maps
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () async {
+                    final url =
+                        'https://www.google.com/maps?q=$latitude,$longitude';
+                    if (await canLaunchUrl(Uri.parse(url))) {
+                      await launchUrl(
+                        Uri.parse(url),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.open_in_new, size: 16),
+                  label: const Text('Abrir en Google Maps'),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
