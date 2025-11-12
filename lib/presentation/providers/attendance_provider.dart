@@ -239,3 +239,25 @@ class AttendanceHistoryParams {
   @override
   int get hashCode => userId.hashCode ^ startDate.hashCode ^ endDate.hashCode;
 }
+
+// ============================================
+// PROVIDER: Asistencias Recientes (últimas 3)
+// ============================================
+final recentAttendanceProvider = FutureProvider.autoDispose
+    .family<List<AttendanceModel>, String>((ref, userId) async {
+      final repository = ref.read(attendanceRepositoryProvider);
+
+      // Obtener últimos 30 días para asegurar que tenemos datos
+      final endDate = DateTime.now();
+      final startDate = endDate.subtract(const Duration(days: 30));
+
+      final allAttendance = await repository.getAttendanceByUser(
+        userId: userId,
+        startDate: startDate,
+        endDate: endDate,
+      );
+
+      // Ordenar por fecha descendente y tomar las primeras 3
+      allAttendance.sort((a, b) => b.checkInTime.compareTo(a.checkInTime));
+      return allAttendance.take(3).toList();
+    });

@@ -7,6 +7,7 @@ import '../providers/attendance_provider.dart';
 import '../providers/sales_provider.dart';
 import '../providers/ai_coaching_provider.dart';
 import '../providers/analytics_provider.dart'; // Contiene DateRange y userPerformanceMetricsProvider
+import '../../data/models/user_model.dart'; // Para AttendanceModel
 import '../../core/widgets/animated_widgets.dart';
 import '../pages/ranking/ranking_page.dart';
 import '../pages/dashboards/worker_dashboard_page.dart';
@@ -249,7 +250,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return const SizedBox.shrink();
     }
 
-    // Obtener datos reales - solo ventas por ahora
+    // Obtener métricas de rendimiento del usuario para el mes actual
+    final now = DateTime.now();
+    final dateRange = DateRange(
+      startDate: DateTime(now.year, now.month, 1),
+      endDate: DateTime(now.year, now.month + 1, 0),
+    );
+
+    final metricsAsync = ref.watch(userPerformanceMetricsProvider(dateRange));
     final salesStatsAsync = ref.watch(salesStatisticsProvider(user.id));
 
     return Column(
@@ -265,22 +273,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         Row(
           children: [
             Expanded(
-              child: _buildStatCard(
-                theme,
-                'Asistencias',
-                'Sin datos',
-                Icons.calendar_today,
-                Colors.blue,
+              child: metricsAsync.when(
+                data: (metrics) => _buildStatCard(
+                  theme,
+                  'Asistencias',
+                  '${metrics.totalCheckIns}',
+                  Icons.calendar_today,
+                  Colors.blue,
+                ),
+                loading: () => _buildStatCard(
+                  theme,
+                  'Asistencias',
+                  '...',
+                  Icons.calendar_today,
+                  Colors.blue,
+                ),
+                error: (_, __) => _buildStatCard(
+                  theme,
+                  'Asistencias',
+                  'Sin datos',
+                  Icons.calendar_today,
+                  Colors.blue,
+                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildStatCard(
-                theme,
-                'Puntualidad',
-                'Sin datos',
-                Icons.access_time,
-                Colors.green,
+              child: metricsAsync.when(
+                data: (metrics) {
+                  final punctualityRate = metrics.totalCheckIns > 0
+                      ? ((metrics.totalCheckIns - metrics.lateCheckIns) /
+                            metrics.totalCheckIns *
+                            100)
+                      : 0.0;
+                  return _buildStatCard(
+                    theme,
+                    'Puntualidad',
+                    '${punctualityRate.toStringAsFixed(1)}%',
+                    Icons.access_time,
+                    Colors.green,
+                  );
+                },
+                loading: () => _buildStatCard(
+                  theme,
+                  'Puntualidad',
+                  '...',
+                  Icons.access_time,
+                  Colors.green,
+                ),
+                error: (_, __) => _buildStatCard(
+                  theme,
+                  'Puntualidad',
+                  'Sin datos',
+                  Icons.access_time,
+                  Colors.green,
+                ),
               ),
             ),
           ],
@@ -289,12 +336,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         Row(
           children: [
             Expanded(
-              child: _buildStatCard(
-                theme,
-                'Ranking',
-                'Sin datos',
-                Icons.emoji_events,
-                Colors.orange,
+              child: metricsAsync.when(
+                data: (metrics) => _buildStatCard(
+                  theme,
+                  'Ranking',
+                  metrics.ranking != null ? '#${metrics.ranking}' : 'Sin datos',
+                  Icons.emoji_events,
+                  Colors.orange,
+                ),
+                loading: () => _buildStatCard(
+                  theme,
+                  'Ranking',
+                  '...',
+                  Icons.emoji_events,
+                  Colors.orange,
+                ),
+                error: (_, __) => _buildStatCard(
+                  theme,
+                  'Ranking',
+                  'Sin datos',
+                  Icons.emoji_events,
+                  Colors.orange,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -390,6 +453,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildRecentActivity(ThemeData theme) {
+    final user = ref.watch(currentUserProvider).value;
+    if (user == null) return const SizedBox.shrink();
+
+    final recentAsync = ref.watch(recentAttendanceProvider(user.id));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -406,14 +474,90 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        ...List.generate(3, (index) => _buildActivityItem(theme, index)),
+        recentAsync.when(
+          data: (attendances) {
+            if (attendances.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    'No hay actividad reciente',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
+                ),
+              );
+            }
+            return Column(
+              children: attendances
+                  .map((attendance) => _buildActivityItem(theme, attendance))
+                  .toList(),
+            );
+          },
+          loading: () => Column(
+            children: List.generate(
+              3,
+              (index) => Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  children: [
+                    CircularProgressIndicator.adaptive(),
+                    SizedBox(width: 16),
+                    Text('Cargando...'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          error: (_, __) => Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Error al cargar actividad',
+              style: theme.textTheme.bodyMedium,
+            ),
+          ),
+        ),
       ],
     ).animate().fadeIn(delay: 400.ms);
   }
 
-  Widget _buildActivityItem(ThemeData theme, int index) {
-    final times = ['8:30 AM', 'Ayer, 8:25 AM', '19 Nov, 8:35 AM'];
-    final types = ['Entrada', 'Entrada', 'Entrada'];
+  Widget _buildActivityItem(ThemeData theme, AttendanceModel attendance) {
+    final now = DateTime.now();
+    final checkInDate = attendance.checkInTime;
+
+    // Formatear fecha de manera amigable
+    String formattedTime;
+    if (checkInDate.year == now.year &&
+        checkInDate.month == now.month &&
+        checkInDate.day == now.day) {
+      // Hoy
+      formattedTime =
+          '${checkInDate.hour.toString().padLeft(2, '0')}:${checkInDate.minute.toString().padLeft(2, '0')}';
+    } else if (checkInDate.year == now.year &&
+        checkInDate.month == now.month &&
+        checkInDate.day == now.day - 1) {
+      // Ayer
+      formattedTime =
+          'Ayer, ${checkInDate.hour.toString().padLeft(2, '0')}:${checkInDate.minute.toString().padLeft(2, '0')}';
+    } else {
+      // Fecha completa
+      formattedTime =
+          '${checkInDate.day} ${_getMonthName(checkInDate.month)}, ${checkInDate.hour.toString().padLeft(2, '0')}:${checkInDate.minute.toString().padLeft(2, '0')}';
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -429,12 +573,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.1),
+              color: attendance.isLate
+                  ? Colors.orange.withValues(alpha: 0.1)
+                  : theme.colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               Icons.login,
-              color: theme.colorScheme.primary,
+              color: attendance.isLate
+                  ? Colors.orange
+                  : theme.colorScheme.primary,
               size: 20,
             ),
           ),
@@ -443,13 +591,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  types[index],
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Entrada',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (attendance.isLate) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Tarde',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.orange,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                Text(times[index], style: theme.textTheme.bodySmall),
+                Text(formattedTime, style: theme.textTheme.bodySmall),
               ],
             ),
           ),
@@ -457,6 +629,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
     );
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Ene',
+      'Feb',
+      'Mar',
+      'Abr',
+      'May',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dic',
+    ];
+    return months[month - 1];
   }
 
   /// Botón para generar consejos IA bajo demanda

@@ -230,7 +230,7 @@ INSERT INTO public.users (
 ) VALUES (
   'UUID_DEL_WORKER',  -- Reemplaza con el UUID real
   'worker@test.com',
-  'Carlos Martínez (Worker)',
+  'Natalie Gomez (Worker)',
   'worker',
   'UUID_DEL_SUPERVISOR',  -- Asignar al supervisor
   true
