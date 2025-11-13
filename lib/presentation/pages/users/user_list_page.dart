@@ -84,13 +84,17 @@ class _UserListPageState extends ConsumerState<UserListPage> {
   Widget build(BuildContext context) {
     final paginationState = ref.watch(paginatedUsersProvider);
     final statistics = ref.watch(userStatisticsProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final onPrimary = colorScheme.onPrimary;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Gestión de Usuarios'),
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
       body: RefreshIndicator(
@@ -104,10 +108,12 @@ class _UserListPageState extends ConsumerState<UserListPage> {
             Container(
               padding: const EdgeInsets.all(AppTheme.spacingM),
               decoration: BoxDecoration(
-                color: AppTheme.primaryBlue,
+                color: colorScheme.primary,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
+                    color: Colors.black.withValues(
+                      alpha: theme.brightness == Brightness.dark ? 0.3 : 0.1,
+                    ),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -126,21 +132,21 @@ class _UserListPageState extends ConsumerState<UserListPage> {
                         ref.read(paginatedUsersProvider.notifier).search(value);
                       }
                     },
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: onPrimary),
                     decoration: InputDecoration(
                       hintText: 'Buscar por nombre o documento...',
                       hintStyle: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.6),
+                        color: onPrimary.withValues(alpha: 0.6),
                       ),
                       prefixIcon: Icon(
                         Icons.search,
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: onPrimary.withValues(alpha: 0.8),
                       ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.clear,
-                                color: Colors.white,
+                                color: onPrimary,
                               ),
                               onPressed: () {
                                 _searchController.clear();
@@ -149,7 +155,7 @@ class _UserListPageState extends ConsumerState<UserListPage> {
                             )
                           : null,
                       filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.2),
+                      fillColor: onPrimary.withValues(alpha: 0.12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(
                           AppTheme.radiusMedium,
@@ -165,19 +171,19 @@ class _UserListPageState extends ConsumerState<UserListPage> {
                   statistics.when(
                     data: (stats) => Row(
                       children: [
-                        _buildStatCard(
+                        _buildStatCard(context, 
                           'Total',
                           '${stats['total'] ?? 0}',
                           Icons.people,
                         ),
                         const SizedBox(width: AppTheme.spacingS),
-                        _buildStatCard(
+                        _buildStatCard(context, 
                           'Activos',
                           '${stats['active'] ?? 0}',
                           Icons.check_circle,
                         ),
                         const SizedBox(width: AppTheme.spacingS),
-                        _buildStatCard(
+                        _buildStatCard(context, 
                           'Inactivos',
                           '${stats['inactive'] ?? 0}',
                           Icons.cancel,
@@ -189,11 +195,11 @@ class _UserListPageState extends ConsumerState<UserListPage> {
                     ),
                     error: (_, __) => Row(
                       children: [
-                        _buildStatCard('Total', '-', Icons.people),
+                        _buildStatCard(context, 'Total', '-', Icons.people),
                         const SizedBox(width: AppTheme.spacingS),
-                        _buildStatCard('Activos', '-', Icons.check_circle),
+                        _buildStatCard(context, 'Activos', '-', Icons.check_circle),
                         const SizedBox(width: AppTheme.spacingS),
-                        _buildStatCard('Inactivos', '-', Icons.cancel),
+                        _buildStatCard(context, 'Inactivos', '-', Icons.cancel),
                       ],
                     ),
                   ),
@@ -211,16 +217,16 @@ class _UserListPageState extends ConsumerState<UserListPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.error_outline,
                             size: 64,
-                            color: Colors.grey,
+                            color: _mutedTextColor(context, 0.6),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'Error: ${paginationState.error}',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.grey),
+                            style: TextStyle(color: _mutedTextColor(context)),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
@@ -271,12 +277,17 @@ class _UserListPageState extends ConsumerState<UserListPage> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon) {
+  Widget _buildStatCard(BuildContext context, String label, String value, IconData icon) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textColor = colorScheme.onPrimary;
+    final subtitleColor = textColor.withValues(alpha: 0.75);
+    final cardColor = textColor.withValues(alpha: 0.15);
+
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(AppTheme.spacingM),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
+          color: cardColor,
           borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
         ),
         child: Column(
@@ -284,12 +295,12 @@ class _UserListPageState extends ConsumerState<UserListPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: Colors.white, size: 20),
+                Icon(icon, color: textColor, size: 20),
                 const SizedBox(width: 4),
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: textColor,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -300,7 +311,7 @@ class _UserListPageState extends ConsumerState<UserListPage> {
             Text(
               label,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
+                color: subtitleColor,
                 fontSize: 12,
               ),
             ),
@@ -312,19 +323,32 @@ class _UserListPageState extends ConsumerState<UserListPage> {
 
   Widget _buildUserCardFromModel(dynamic user) {
     final isActive = user.isActive;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final cardColor = theme.cardColor;
+    final iconColor = _mutedTextColor(context, 0.7);
+    final shadowColor = theme.brightness == Brightness.dark
+        ? Colors.black.withValues(alpha: 0.25)
+        : Colors.black.withValues(alpha: 0.05);
+    final borderColor = colorScheme.outlineVariant.withValues(
+      alpha: theme.brightness == Brightness.dark ? 0.35 : 0.12,
+    );
+    final statusColor =
+        isActive ? AppTheme.success : _mutedTextColor(context, 0.6);
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppTheme.spacingM),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: shadowColor,
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
+        border: Border.all(color: borderColor),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(AppTheme.spacingM),
@@ -354,9 +378,9 @@ class _UserListPageState extends ConsumerState<UserListPage> {
                 width: 16,
                 height: 16,
                 decoration: BoxDecoration(
-                  color: isActive ? Colors.green : Colors.grey,
+                  color: statusColor,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
+                  border: Border.all(color: theme.scaffoldBackgroundColor, width: 2),
                 ),
               ),
             ),
@@ -364,7 +388,9 @@ class _UserListPageState extends ConsumerState<UserListPage> {
         ),
         title: Text(
           user.fullName,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -372,10 +398,14 @@ class _UserListPageState extends ConsumerState<UserListPage> {
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Icons.email, size: 14, color: Colors.grey),
+                Icon(Icons.email, size: 14, color: iconColor),
                 const SizedBox(width: 4),
                 Expanded(
-                  child: Text(user.email, overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    user.email,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall,
+                  ),
                 ),
               ],
             ),
@@ -383,18 +413,27 @@ class _UserListPageState extends ConsumerState<UserListPage> {
               const SizedBox(height: 2),
               Row(
                 children: [
-                  const Icon(Icons.phone, size: 14, color: Colors.grey),
+                  Icon(Icons.phone, size: 14, color: iconColor),
                   const SizedBox(width: 4),
-                  Text(user.phone!),
+                  Text(
+                    user.phone!,
+                    style: theme.textTheme.bodySmall,
+                  ),
                 ],
               ),
             ],
             const SizedBox(height: 2),
             Row(
               children: [
-                const Icon(Icons.badge, size: 14, color: Colors.grey),
+                Icon(Icons.badge, size: 14, color: iconColor),
                 const SizedBox(width: 4),
-                Text(user.role.toUpperCase()),
+                Text(
+                  user.role.toUpperCase(),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ],
             ),
           ],
@@ -405,15 +444,13 @@ class _UserListPageState extends ConsumerState<UserListPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: isActive
-                    ? Colors.green.withValues(alpha: 0.1)
-                    : Colors.grey.withValues(alpha: 0.1),
+                color: statusColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
               ),
               child: Text(
                 isActive ? 'Activo' : 'Inactivo',
                 style: TextStyle(
-                  color: isActive ? Colors.green : Colors.grey,
+                  color: statusColor,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
@@ -435,5 +472,12 @@ class _UserListPageState extends ConsumerState<UserListPage> {
         },
       ),
     );
+  }
+
+  Color _mutedTextColor(BuildContext context, [double opacity = 0.6]) {
+    final theme = Theme.of(context);
+    final base = theme.textTheme.bodyMedium?.color ??
+        (theme.brightness == Brightness.dark ? Colors.white : Colors.black87);
+    return base.withValues(alpha: opacity);
   }
 }

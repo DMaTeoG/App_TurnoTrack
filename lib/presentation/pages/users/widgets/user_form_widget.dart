@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/validators.dart';
@@ -273,6 +274,13 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
             label: 'Nombre Completo',
             hint: 'Ej: Carlos Rodríguez',
             icon: Icons.person,
+            textCapitalization: TextCapitalization.words,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(
+                RegExp(r"[a-zA-ZÁÉÍÓÚáéíóúÑñÜü'\s-]"),
+              ),
+              LengthLimitingTextInputFormatter(60),
+            ],
             isValid: _isNameValid,
             errorText: _nameController.text.isNotEmpty && !_isNameValid
                 ? 'Mínimo 3 caracteres'
@@ -308,6 +316,10 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
             hint: '12345678',
             icon: Icons.badge,
             keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(20),
+            ],
             isValid: _isDocumentValid,
             errorText: _documentController.text.isNotEmpty && !_isDocumentValid
                 ? 'Mínimo 5 caracteres'
@@ -323,6 +335,10 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
             hint: '555-1234',
             icon: Icons.phone,
             keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s]')),
+              LengthLimitingTextInputFormatter(20),
+            ],
             isValid: _isPhoneValid,
             errorText: _phoneController.text.isNotEmpty && !_isPhoneValid
                 ? 'Mínimo 7 dígitos'
@@ -440,46 +456,59 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
     required String hint,
     required IconData icon,
     TextInputType? keyboardType,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+    List<TextInputFormatter>? inputFormatters,
+    TextInputAction? textInputAction,
+    int? maxLength,
     bool isValid = false,
     String? errorText,
   }) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.textSecondaryLight,
-          ),
-        ),
+        Text(label, style: _sectionLabelStyle()),
         const SizedBox(height: AppTheme.spacingXS),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
+          textCapitalization: textCapitalization,
+          textInputAction: textInputAction,
+          inputFormatters: inputFormatters,
+          maxLength: maxLength,
+          buildCounter: maxLength != null
+              ? (
+                  context, {
+                  required int currentLength,
+                  required bool isFocused,
+                  int? maxLength,
+                }) =>
+                  null
+              : null,
+          style: theme.textTheme.bodyMedium,
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: Icon(icon, color: AppTheme.textSecondaryLight),
+            prefixIcon: Icon(icon, color: _mutedTextColor(0.7)),
             suffixIcon: controller.text.isNotEmpty
                 ? Icon(
                     isValid ? Icons.check_circle : Icons.cancel,
-                    color: isValid ? Colors.green : Colors.red,
+                    color: isValid ? AppTheme.success : Colors.red,
                   )
                 : null,
             errorText: errorText,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: _fieldBorderColor()),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: _fieldBorderColor()),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-              borderSide: const BorderSide(
-                color: AppTheme.primaryBlue,
+              borderSide: BorderSide(
+                color: theme.colorScheme.primary,
                 width: 2,
               ),
             ),
@@ -488,7 +517,7 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
               borderSide: const BorderSide(color: Colors.red, width: 2),
             ),
             filled: true,
-            fillColor: Colors.grey.shade50,
+            fillColor: _fieldBackgroundColor(),
           ),
         ),
       ],
@@ -567,184 +596,94 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
   }
 
   Widget _buildRoleSelector() {
-    // Determinar roles disponibles según el usuario actual
+    final theme = Theme.of(context);
+    final dropdownColor = theme.cardColor;
     final List<DropdownMenuItem<String>> availableRoles = [];
 
-    // Worker siempre disponible
     availableRoles.add(
-      const DropdownMenuItem(
+      _roleMenuItem(
         value: 'worker',
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Icon(Icons.person, color: AppTheme.primaryBlue, size: 20),
-              SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Trabajador',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    'Puede registrar asistencia y ventas',
-                    style: TextStyle(fontSize: 11, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        icon: Icons.person,
+        iconColor: theme.colorScheme.primary,
+        title: 'Trabajador',
+        subtitle: 'Puede registrar asistencia y ventas',
       ),
     );
 
-    // Supervisor y Manager solo si el usuario actual es Manager
     if (widget.currentUserRole == 'manager') {
       availableRoles.add(
-        const DropdownMenuItem(
+        _roleMenuItem(
           value: 'supervisor',
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Icon(Icons.supervisor_account, color: Colors.orange, size: 20),
-                SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Supervisor',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    Text(
-                      'Gestiona equipo y ve reportes',
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          icon: Icons.supervisor_account,
+          iconColor: Colors.orange,
+          title: 'Supervisor',
+          subtitle: 'Gestiona equipo y ve reportes',
         ),
       );
 
       availableRoles.add(
-        const DropdownMenuItem(
+        _roleMenuItem(
           value: 'manager',
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.admin_panel_settings,
-                  color: Colors.purple,
-                  size: 20,
-                ),
-                SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Manager',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    Text(
-                      'Control total del sistema',
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          icon: Icons.admin_panel_settings,
+          iconColor: Colors.purple,
+          title: 'Manager',
+          subtitle: 'Control total del sistema',
         ),
       );
-    } else {
-      // ✅ FIX: Si el usuario actual NO es manager pero el usuario editado
-      // es supervisor/manager, agregar ese item como disabled para que no crashee
-      if (_selectedRole == 'supervisor' || _selectedRole == 'manager') {
-        availableRoles.add(
-          DropdownMenuItem(
-            value: _selectedRole,
-            enabled: false, // Deshabilitado, no se puede seleccionar
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Icon(
-                    _selectedRole == 'supervisor'
-                        ? Icons.supervisor_account
-                        : Icons.admin_panel_settings,
-                    color: Colors.grey,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _selectedRole == 'supervisor'
-                              ? 'Supervisor'
-                              : 'Manager',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const Text(
-                          'Solo managers pueden editar este rol',
-                          style: TextStyle(fontSize: 11, color: Colors.grey),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      }
+    } else if (_selectedRole == 'supervisor' || _selectedRole == 'manager') {
+      availableRoles.add(
+        _roleMenuItem(
+          value: _selectedRole,
+          icon: _selectedRole == 'supervisor'
+              ? Icons.supervisor_account
+              : Icons.admin_panel_settings,
+          iconColor: theme.disabledColor,
+          title: _selectedRole == 'supervisor' ? 'Supervisor' : 'Manager',
+          subtitle: 'Solo managers pueden editar este rol',
+          enabled: false,
+        ),
+      );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Rol del Usuario',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.textSecondaryLight,
-          ),
+          style: _sectionLabelStyle(),
         ),
         const SizedBox(height: AppTheme.spacingXS),
         Container(
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
+            color: _fieldBackgroundColor(),
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: _fieldBorderColor()),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _selectedRole,
               isExpanded: true,
+              dropdownColor: dropdownColor,
+              itemHeight: null,
+              selectedItemBuilder: (context) {
+                return availableRoles.map((item) {
+                  final roleValue = item.value ?? _selectedRole;
+                  return _RoleSelectedTile(
+                    icon: _roleIcon(roleValue),
+                    iconColor: _roleIconColor(roleValue),
+                    title: _roleTitle(roleValue),
+                  );
+                }).toList();
+              },
               icon: const Padding(
                 padding: EdgeInsets.only(right: 16),
                 child: Icon(Icons.arrow_drop_down),
               ),
               items: availableRoles,
               onChanged: (value) {
+                if (value == null) return;
                 setState(() {
-                  _selectedRole = value!;
-                  // Si cambia a supervisor o manager, limpiar supervisor
+                  _selectedRole = value;
                   if (value != 'worker') {
                     _selectedSupervisorId = null;
                   }
@@ -758,38 +697,38 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
   }
 
   Widget _buildSupervisorDropdown(List<dynamic> supervisors) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Supervisor (Opcional)',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.textSecondaryLight,
-          ),
+          style: _sectionLabelStyle(),
         ),
         const SizedBox(height: AppTheme.spacingXS),
         Container(
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
+            color: _fieldBackgroundColor(),
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: _fieldBorderColor()),
           ),
           child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
+            child: DropdownButton<String?>(
               value: _selectedSupervisorId,
               hint: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Text('Seleccionar supervisor'),
               ),
               isExpanded: true,
+              dropdownColor: theme.cardColor,
+              itemHeight: null,
               icon: const Padding(
                 padding: EdgeInsets.only(right: 16),
                 child: Icon(Icons.arrow_drop_down),
               ),
               items: [
-                const DropdownMenuItem<String>(
+                const DropdownMenuItem<String?>(
                   value: null,
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
@@ -797,7 +736,7 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
                   ),
                 ),
                 ...supervisors.map((supervisor) {
-                  return DropdownMenuItem<String>(
+                  return DropdownMenuItem<String?>(
                     value: supervisor.id,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -839,31 +778,177 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
   }
 
   Widget _buildActiveSwitch() {
+    final theme = Theme.of(context);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: _fieldBackgroundColor(),
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: _fieldBorderColor()),
       ),
       child: SwitchListTile(
-        title: const Text(
+        title: Text(
           'Usuario Activo',
-          style: TextStyle(fontWeight: FontWeight.w600),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
         subtitle: Text(
           _isActive
-              ? 'Puede iniciar sesión y usar el sistema'
+              ? 'Puede iniciar sesi?n y usar el sistema'
               : 'No puede acceder al sistema',
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppTheme.textSecondaryLight,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: _mutedTextColor(0.7),
           ),
         ),
         value: _isActive,
-        activeThumbColor: AppTheme.primaryBlue,
+        activeThumbColor: theme.colorScheme.primary,
         onChanged: (value) {
           setState(() => _isActive = value);
         },
+      ),
+    );
+  }
+
+  Color _fieldBackgroundColor() {
+    final theme = Theme.of(context);
+    final base = theme.colorScheme.surfaceContainerHighest;
+    final alpha = theme.brightness == Brightness.dark ? 0.35 : 0.95;
+    return base.withValues(alpha: alpha);
+  }
+
+  Color _fieldBorderColor() {
+    final theme = Theme.of(context);
+    return theme.colorScheme.outlineVariant.withValues(
+      alpha: theme.brightness == Brightness.dark ? 0.4 : 0.2,
+    );
+  }
+
+  TextStyle _sectionLabelStyle() {
+    final theme = Theme.of(context);
+    return theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+        ) ??
+        const TextStyle(fontWeight: FontWeight.w600, fontSize: 14);
+  }
+
+  Color _mutedTextColor([double opacity = 0.6]) {
+    final theme = Theme.of(context);
+    final base = theme.textTheme.bodyMedium?.color ??
+        (theme.brightness == Brightness.dark ? Colors.white : Colors.black87);
+    return base.withValues(alpha: opacity);
+  }
+
+  DropdownMenuItem<String> _roleMenuItem({
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    bool enabled = true,
+  }) {
+    final theme = Theme.of(context);
+    final textStyle = theme.textTheme.bodyMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+      color: enabled ? null : _mutedTextColor(),
+    );
+    final subtitleStyle = theme.textTheme.bodySmall?.copyWith(
+      color: _mutedTextColor(0.7),
+      fontSize: 11,
+    );
+
+    return DropdownMenuItem<String>(
+      value: value,
+      enabled: enabled,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Row(
+          children: [
+            Icon(icon, color: enabled ? iconColor : _mutedTextColor(0.5), size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title, style: textStyle),
+                  Text(
+                    subtitle,
+                    style: subtitleStyle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _roleIcon(String role) {
+    switch (role) {
+      case 'manager':
+        return Icons.admin_panel_settings;
+      case 'supervisor':
+        return Icons.supervisor_account;
+      default:
+        return Icons.person;
+    }
+  }
+
+  Color _roleIconColor(String role) {
+    final theme = Theme.of(context);
+    switch (role) {
+      case 'manager':
+        return Colors.purple;
+      case 'supervisor':
+        return Colors.orange;
+      default:
+        return theme.colorScheme.primary;
+    }
+  }
+
+  String _roleTitle(String role) {
+    switch (role) {
+      case 'manager':
+        return 'Manager';
+      case 'supervisor':
+        return 'Supervisor';
+      default:
+        return 'Trabajador';
+    }
+  }
+
+}
+
+class _RoleSelectedTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+
+  const _RoleSelectedTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          Icon(icon, color: iconColor, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
       ),
     );
   }
