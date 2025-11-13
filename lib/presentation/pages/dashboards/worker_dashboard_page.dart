@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/user_model.dart';
 import '../../providers/ai_coaching_provider.dart';
 import '../../providers/analytics_provider.dart';
@@ -24,13 +25,17 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
     final dateRange = DateRange.currentMonth();
     final metricsAsync = ref.watch(userPerformanceMetricsProvider(dateRange));
     final aiCoachingState = ref.watch(aiCoachingProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('Mi Desempeño'),
+        title: const Text('Mi Desempeño'),
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -139,8 +144,10 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
   }
 
   Widget _buildWelcomeCard() {
+    final theme = Theme.of(context);
     return Card(
-      elevation: 2,
+      color: theme.cardColor,
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Row(
@@ -161,15 +168,16 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
                 children: [
                   Text(
                     '¡Hola, ${widget.user.fullName.split(' ').first}!',
-                    style: const TextStyle(
-                      fontSize: 20,
+                    style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Este mes vas muy bien 💪',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: _mutedTextColor(),
+                    ),
                   ),
                 ],
               ),
@@ -182,16 +190,19 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
 
   Widget _buildScoreCard(int currentScore) {
     final percentage = currentScore / 100;
+    final theme = Theme.of(context);
 
     return Card(
-      elevation: 2,
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
             Text(
               'Score de Asistencia',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: _mutedTextColor(),
+              ),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -206,7 +217,7 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
                     child: CircularProgressIndicator(
                       value: percentage,
                       strokeWidth: 12,
-                      backgroundColor: Colors.grey[200],
+                      backgroundColor: _mutedTextColor(0.1),
                       valueColor: AlwaysStoppedAnimation<Color>(
                         _getScoreColor(currentScore),
                       ),
@@ -217,14 +228,15 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
                     children: [
                       Text(
                         '$currentScore',
-                        style: const TextStyle(
-                          fontSize: 48,
+                        style: theme.textTheme.displaySmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
                         '/100',
-                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: _mutedTextColor(),
+                        ),
                       ),
                     ],
                   ),
@@ -252,8 +264,10 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
     required String title,
     required String value,
   }) {
+    final theme = Theme.of(context);
     return Card(
-      elevation: 2,
+      elevation: 0,
+      color: theme.cardColor,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -262,12 +276,16 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
             const SizedBox(height: 8),
             Text(
               value,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: _mutedTextColor(),
+              ),
             ),
           ],
         ),
@@ -282,127 +300,51 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
     return rankingAsync.when(
       data: (rankings) {
         final totalWorkers = rankings.length;
-        return Card(
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.emoji_events,
-                    color: Colors.amber,
-                    size: 32,
-                  ),
+        return _buildRankingInfoCard(
+          title: 'Tu Posición',
+          value: '#$ranking de $totalWorkers',
+          trailing: IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RankingPage(currentUser: widget.user),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Tu Posición',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '#$ranking de $totalWorkers',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            RankingPage(currentUser: widget.user),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.chevron_right),
-                ),
-              ],
-            ),
+              );
+            },
+            icon: const Icon(Icons.chevron_right),
           ),
         );
       },
       loading: () => Card(
-        elevation: 2,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
+        elevation: 0,
+        color: Theme.of(context).cardColor,
+        child: const Padding(
+          padding: EdgeInsets.all(20),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.emoji_events,
-                  color: Colors.amber,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(child: CircularProgressIndicator()),
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Expanded(child: Text('Calculando posición...')),
             ],
           ),
         ),
       ),
       error: (error, stack) => Card(
-        elevation: 2,
+        elevation: 0,
+        color: Theme.of(context).cardColor,
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.emoji_events,
-                  color: Colors.amber,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 16),
+              Icon(Icons.error_outline, color: Colors.red[300]),
+              const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Tu Posición',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                child: Text(
+                  'Error al cargar ranking: $error',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.red,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '#$ranking',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ],
@@ -413,16 +355,23 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
   }
 
   Widget _buildWeeklyChart() {
+    final theme = Theme.of(context);
+    final positiveColor = AppTheme.success;
+    final neutralColor = AppTheme.warning;
+
     return Card(
-      elevation: 2,
+      elevation: 0,
+      color: theme.cardColor,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Última Semana',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -441,7 +390,7 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
                           const days = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
                           return Text(
                             days[value.toInt() % 7],
-                            style: const TextStyle(fontSize: 12),
+                            style: theme.textTheme.labelSmall,
                           );
                         },
                       ),
@@ -459,7 +408,6 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
                   gridData: const FlGridData(show: false),
                   borderData: FlBorderData(show: false),
                   barGroups: List.generate(7, (index) {
-                    // Mock data
                     final values = [8.0, 8.2, 7.9, 8.5, 8.1, 0, 0];
                     return BarChartGroupData(
                       x: index,
@@ -467,8 +415,8 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
                         BarChartRodData(
                           toY: values[index].toDouble(),
                           color: values[index] > 8.0
-                              ? Colors.green
-                              : Colors.orange,
+                              ? positiveColor
+                              : neutralColor,
                           width: 16,
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(4),
@@ -487,8 +435,10 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
   }
 
   Widget _buildAICoachingCard(AICoachingState state) {
+    final theme = Theme.of(context);
     return Card(
-      elevation: 2,
+      elevation: 0,
+      color: theme.cardColor,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -496,11 +446,13 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
           children: [
             Row(
               children: [
-                Icon(Icons.psychology, color: Colors.purple[400]),
+                Icon(Icons.psychology, color: theme.colorScheme.secondary),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Consejos de IA',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -513,25 +465,85 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
                 ),
               )
             else if (state.error != null)
-              Text(state.error!, style: const TextStyle(color: Colors.red))
+              Text(
+                state.error!,
+                style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+              )
             else if (state.advice != null)
               Text(
                 state.advice!,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[800],
+                style: theme.textTheme.bodyMedium?.copyWith(
                   height: 1.5,
                 ),
               )
             else
               Text(
                 'Toca el botón de abajo para recibir consejos personalizados basados en tu desempeño.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: _mutedTextColor(),
                   fontStyle: FontStyle.italic,
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _mutedTextColor([double opacity = 0.6]) {
+    final theme = Theme.of(context);
+    final base = theme.textTheme.bodyMedium?.color ??
+        (theme.brightness == Brightness.dark ? Colors.white : Colors.black87);
+    return base.withValues(alpha: opacity);
+  }
+
+  Widget _buildRankingInfoCard({
+    required String title,
+    required String value,
+    Widget? trailing,
+  }) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      color: theme.cardColor,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.emoji_events,
+                color: Colors.amber,
+                size: 32,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (trailing != null) trailing,
           ],
         ),
       ),

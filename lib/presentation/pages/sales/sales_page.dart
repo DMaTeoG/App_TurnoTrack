@@ -36,12 +36,16 @@ class SalesPage extends ConsumerWidget {
     final salesAsync = ref.watch(salesListProvider(currentUser.id));
     final statisticsAsync = ref.watch(salesStatisticsProvider(currentUser.id));
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Mis Ventas'),
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         actions: [
           IconButton(
@@ -64,7 +68,7 @@ class SalesPage extends ConsumerWidget {
             // Estadísticas Header
             SliverToBoxAdapter(
               child: statisticsAsync.when(
-                data: (stats) => _buildStatisticsHeader(stats),
+                data: (stats) => _buildStatisticsHeader(context, stats),
                 loading: () => const _LoadingStatistics(),
                 error: (_, __) => const SizedBox.shrink(),
               ),
@@ -130,36 +134,39 @@ class SalesPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatisticsHeader(SalesStatistics stats) {
+  Widget _buildStatisticsHeader(BuildContext context, SalesStatistics stats) {
+    final theme = Theme.of(context);
+    final onPrimary = theme.colorScheme.onPrimary;
+    final gradientStart = theme.colorScheme.primary;
+    final gradientEnd = theme.colorScheme.primary.withValues(
+      alpha: theme.brightness == Brightness.dark ? 0.85 : 0.9,
+    );
+
     return Container(
       margin: const EdgeInsets.all(AppTheme.spacingM),
       padding: const EdgeInsets.all(AppTheme.spacingL),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppTheme.primaryBlue,
-            AppTheme.primaryBlue.withValues(alpha: 0.8),
-          ],
+          colors: [gradientStart, gradientEnd],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryBlue.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: gradientStart.withValues(alpha: 0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Resumen del Mes',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: onPrimary,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -215,24 +222,28 @@ class SalesPage extends ConsumerWidget {
   }
 
   Widget _buildEmptyState(BuildContext context, WidgetRef ref, String userId) {
+    final theme = Theme.of(context);
+    final iconColor = _mutedTextColor(context, 0.3);
+    final titleColor = theme.textTheme.titleMedium?.color ?? Colors.white;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.shopping_bag_outlined, size: 120, color: Colors.grey[300]),
+          Icon(Icons.shopping_bag_outlined, size: 120, color: iconColor),
           const SizedBox(height: AppTheme.spacingL),
           Text(
             '¡No hay ventas registradas!',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
+              color: titleColor,
             ),
           ),
           const SizedBox(height: AppTheme.spacingS),
           Text(
             'Comienza agregando tu primera venta',
-            style: TextStyle(fontSize: 16, color: Colors.grey[500]),
+            style: TextStyle(fontSize: 16, color: _mutedTextColor(context)),
           ),
           const SizedBox(height: AppTheme.spacingL),
           ElevatedButton.icon(
@@ -290,27 +301,29 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onPrimary = theme.colorScheme.onPrimary;
+
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacingM),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
+        color: onPrimary.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.white, size: 24),
+          Icon(icon, color: onPrimary, size: 24),
           const SizedBox(height: AppTheme.spacingS),
           Text(
             label,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
+            style: TextStyle(color: onPrimary.withValues(alpha: 0.7), fontSize: 12),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: onPrimary,
               fontWeight: FontWeight.bold,
             ),
             maxLines: 1,
@@ -332,17 +345,26 @@ class _SaleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd MMM yyyy', 'es');
     final currencyFormat = NumberFormat.currency(locale: 'es_ES', symbol: '\$');
+    final theme = Theme.of(context);
+    final cardColor = theme.cardColor;
+    final borderColor = theme.colorScheme.outlineVariant.withValues(
+      alpha: theme.brightness == Brightness.dark ? 0.4 : 0.15,
+    );
+    final muted = _mutedTextColor(context);
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppTheme.spacingM),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(
+              alpha: theme.brightness == Brightness.dark ? 0.2 : 0.05,
+            ),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -370,16 +392,19 @@ class _SaleCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildDetailRow(
+                      context,
                       'Categoría',
                       sale.productCategory ?? 'Sin categoría',
                     ),
-                    _buildDetailRow('Fecha', dateFormat.format(sale.date)),
-                    _buildDetailRow('Cantidad', '${sale.quantity} unidades'),
+                    _buildDetailRow(context, 'Fecha', dateFormat.format(sale.date)),
+                    _buildDetailRow(context, 'Cantidad', '${sale.quantity} unidades'),
                     _buildDetailRow(
+                      context,
                       'Monto',
                       currencyFormat.format(sale.amount),
                     ),
                     _buildDetailRow(
+                      context,
                       'Precio unitario',
                       currencyFormat.format(sale.amount / sale.quantity),
                     ),
@@ -408,7 +433,7 @@ class _SaleCard extends StatelessWidget {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: AppTheme.warning.withValues(alpha: 0.1),
+                    color: AppTheme.warning.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   ),
                   child: Icon(
@@ -425,20 +450,23 @@ class _SaleCard extends StatelessWidget {
                     children: [
                       Text(
                         sale.productCategory ?? 'Sin categoría',
-                        style: const TextStyle(
-                          fontSize: 16,
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${sale.quantity} unidades',
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: muted,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         dateFormat.format(sale.date),
-                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: _mutedTextColor(context, 0.7),
+                        ),
                       ),
                     ],
                   ),
@@ -446,8 +474,7 @@ class _SaleCard extends StatelessWidget {
                 // Monto
                 Text(
                   currencyFormat.format(sale.amount),
-                  style: const TextStyle(
-                    fontSize: 18,
+                  style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppTheme.success,
                   ),
@@ -460,7 +487,8 @@ class _SaleCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -468,18 +496,23 @@ class _SaleCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: _mutedTextColor(context, 0.8),
               fontWeight: FontWeight.w500,
-              color: Colors.grey,
             ),
           ),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  IconData _getCategoryIcon(String? category) {
+IconData _getCategoryIcon(String? category) {
     switch (category?.toLowerCase()) {
       case 'electrónica':
       case 'electronica':
@@ -504,14 +537,27 @@ class _LoadingStatistics extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.all(AppTheme.spacingM),
       padding: const EdgeInsets.all(AppTheme.spacingL),
       decoration: BoxDecoration(
-        color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+        color: theme.colorScheme.primary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
       ),
-      child: const Center(child: CircularProgressIndicator()),
+      child: Center(
+        child: CircularProgressIndicator(
+          valueColor:
+              AlwaysStoppedAnimation<Color>(theme.colorScheme.onPrimary),
+        ),
+      ),
     );
   }
+}
+
+Color _mutedTextColor(BuildContext context, [double opacity = 0.6]) {
+  final theme = Theme.of(context);
+  final base = theme.textTheme.bodyMedium?.color ??
+      (theme.brightness == Brightness.dark ? Colors.white : Colors.black87);
+  return base.withValues(alpha: opacity);
 }
