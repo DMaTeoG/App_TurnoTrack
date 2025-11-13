@@ -56,6 +56,7 @@ SET
 DROP POLICY IF EXISTS "Users can upload their attendance photos" ON storage.objects;
 DROP POLICY IF EXISTS "Users can view attendance photos" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete their attendance photos" ON storage.objects;
+DROP POLICY IF EXISTS "Managers can delete attendance photos" ON storage.objects;
 DROP POLICY IF EXISTS "Users can upload their profile photos" ON storage.objects;
 DROP POLICY IF EXISTS "Users can view profile photos" ON storage.objects;
 DROP POLICY IF EXISTS "Users can update their profile photos" ON storage.objects;
@@ -71,7 +72,7 @@ CREATE POLICY "Users can upload their attendance photos"
     TO authenticated
     WITH CHECK (
       bucket_id = 'attendance-photos'
-      AND auth.role() = 'authenticated'
+      AND owner = auth.uid()
     );
 
 -- Cualquier usuario autenticado puede ver fotos de asistencia
@@ -99,15 +100,21 @@ CREATE POLICY "Users can upload their profile photos"
     TO authenticated
     WITH CHECK (
       bucket_id = 'profile-photos'
-      AND auth.role() = 'authenticated'
+      AND owner = auth.uid()
     );
 
 -- Usuarios pueden actualizar su propia foto de perfil
 CREATE POLICY "Users can update their profile photos"
     ON storage.objects FOR UPDATE
     TO authenticated
-    USING (bucket_id = 'profile-photos')
-    WITH CHECK (bucket_id = 'profile-photos');
+    USING (
+      bucket_id = 'profile-photos'
+      AND owner = auth.uid()
+    )
+    WITH CHECK (
+      bucket_id = 'profile-photos'
+      AND owner = auth.uid()
+    );
 
 -- Cualquier usuario autenticado puede ver fotos de perfil
 CREATE POLICY "Users can view profile photos"
@@ -119,7 +126,10 @@ CREATE POLICY "Users can view profile photos"
 CREATE POLICY "Users can delete their profile photos"
     ON storage.objects FOR DELETE
     TO authenticated
-    USING (bucket_id = 'profile-photos');
+    USING (
+      bucket_id = 'profile-photos'
+      AND owner = auth.uid()
+    );
 
 -- =============================================
 -- PASO 4: VERIFICAR CONFIGURACIÓN

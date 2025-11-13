@@ -1,12 +1,13 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../utils/app_logger.dart';
 import '../../data/models/user_model.dart';
 
 /// Service for AI-powered coaching using Google Gemini
 /// Model: gemini-1.5-flash (latest stable, fastest, optimized for text)
 /// API Version: v1beta (production ready)
 class GeminiAIService {
-  late final GenerativeModel _model;
+  GenerativeModel? _model;
 
   // Gemini 1.5 Flash - Optimized for speed and quality
   // Use gemini-1.5-pro for complex reasoning if needed
@@ -21,11 +22,17 @@ class GeminiAIService {
     stopSequences: ['END'],
   );
 
-  GeminiAIService() {
-    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
+  bool get isConfigured => _model != null;
 
-    if (apiKey.isEmpty) {
-      throw Exception('GEMINI_API_KEY not found in .env file');
+  GeminiAIService() {
+    final apiKey = dotenv.env['GEMINI_API_KEY']?.trim();
+
+    if (apiKey == null || apiKey.isEmpty) {
+      AppLogger.warning(
+        'Gemini API key not configured. AI features disabled.',
+        'GeminiAI',
+      );
+      return;
     }
 
     _model = GenerativeModel(
@@ -41,6 +48,14 @@ class GeminiAIService {
     );
   }
 
+  void _ensureConfigured() {
+    if (_model == null) {
+      throw StateError(
+        'Funcionalidad de IA no configurada. Agrega GEMINI_API_KEY al archivo .env.',
+      );
+    }
+  }
+
   /// Generate personalized coaching advice based on performance metrics
   /// [coachingType]: 'competitive' for ranking/comparison focus, 'motivational' for personal growth
   Future<String> generateCoachingAdvice({
@@ -49,13 +64,15 @@ class GeminiAIService {
     required String language,
     String coachingType = 'competitive', // 'competitive' or 'motivational'
   }) async {
+    _ensureConfigured();
+
     final prompt = coachingType == 'motivational'
         ? _buildMotivationalPrompt(user, metrics, language)
         : _buildCoachingPrompt(user, metrics, language);
 
     try {
       final content = [Content.text(prompt)];
-      final response = await _model.generateContent(content);
+      final response = await _model!.generateContent(content);
 
       return response.text ?? 'No se pudo generar consejo';
     } catch (e) {
@@ -212,6 +229,8 @@ GENERATE YOUR ANALYSIS NOW:''';
     required List<PerformanceMetrics> teamMetrics,
     required String language,
   }) async {
+    _ensureConfigured();
+
     final isSpanish = language == 'es';
 
     // Calculate team statistics
@@ -304,7 +323,7 @@ GENERATE YOUR ANALYSIS:''';
 
     try {
       final content = [Content.text(prompt)];
-      final response = await _model.generateContent(content);
+      final response = await _model!.generateContent(content);
 
       return response.text ?? 'No se pudo generar resumen';
     } catch (e) {
@@ -317,6 +336,8 @@ GENERATE YOUR ANALYSIS:''';
     required Map<String, dynamic> organizationKPIs,
     required String language,
   }) async {
+    _ensureConfigured();
+
     final isSpanish = language == 'es';
 
     // Extract KPIs
@@ -410,7 +431,7 @@ GENERATE YOUR STRATEGIC ANALYSIS:''';
 
     try {
       final content = [Content.text(prompt)];
-      final response = await _model.generateContent(content);
+      final response = await _model!.generateContent(content);
 
       return response.text ?? 'No se pudo generar análisis';
     } catch (e) {
@@ -423,6 +444,8 @@ GENERATE YOUR STRATEGIC ANALYSIS:''';
     required List<AttendanceModel> recentAttendance,
     required String language,
   }) async {
+    _ensureConfigured();
+
     final isSpanish = language == 'es';
 
     // Analyze attendance patterns
@@ -551,7 +574,7 @@ GENERATE YOUR PREDICTION:''';
 
     try {
       final content = [Content.text(prompt)];
-      final response = await _model.generateContent(content);
+      final response = await _model!.generateContent(content);
 
       return response.text ??
           (isSpanish
