@@ -116,11 +116,8 @@ class MyApp extends ConsumerWidget {
           home: Builder(
             builder: (navigatorContext) {
               return SplashScreen(
-                onAnimationComplete: () {
-                  Navigator.of(navigatorContext).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
-                },
+                onAnimationComplete: () =>
+                    _navigateAfterSplash(navigatorContext, ref),
               );
             },
           ),
@@ -237,5 +234,41 @@ class MyApp extends ConsumerWidget {
         ); // MaterialApp
       }, // data
     ); // themeModeAsync.when
+  }
+
+  Future<void> _navigateAfterSplash(
+    BuildContext navigatorContext,
+    WidgetRef ref,
+  ) async {
+    try {
+      final user = await ref.read(authNotifierProvider.future);
+
+      if (!navigatorContext.mounted) return;
+
+      if (user == null) {
+        Navigator.of(navigatorContext).pushReplacementNamed('/login');
+        return;
+      }
+
+      final role = user.role.toLowerCase();
+      String routeName;
+
+      switch (role) {
+        case 'manager':
+          routeName = '/manager';
+          break;
+        case 'supervisor':
+          routeName = '/supervisor';
+          break;
+        case 'worker':
+        default:
+          routeName = '/home';
+      }
+
+      Navigator.of(navigatorContext).pushReplacementNamed(routeName);
+    } catch (error) {
+      if (!navigatorContext.mounted) return;
+      Navigator.of(navigatorContext).pushReplacementNamed('/login');
+    }
   }
 }

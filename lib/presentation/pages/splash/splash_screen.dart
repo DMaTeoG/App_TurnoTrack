@@ -5,7 +5,7 @@ import '../../../core/theme/app_theme.dart';
 /// Modern splash screen with animated logo
 /// Smooth transitions similar to Apple App Store
 class SplashScreen extends StatefulWidget {
-  final VoidCallback onAnimationComplete;
+  final Future<void> Function() onAnimationComplete;
 
   const SplashScreen({super.key, required this.onAnimationComplete});
 
@@ -89,9 +89,9 @@ class _SplashScreenState extends State<SplashScreen>
 
     // 5. Navigate - Esperar al siguiente frame para asegurar contexto válido
     if (mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (mounted) {
-          widget.onAnimationComplete();
+          await widget.onAnimationComplete();
         }
       });
     }
