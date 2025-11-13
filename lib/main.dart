@@ -91,160 +91,151 @@ class MyApp extends ConsumerWidget {
 
           // Forzar idioma a Español
           locale: const Locale('es', ''),
-              supportedLocales: const [
-                Locale('es', ''), // Español
-                Locale('en', ''), // English
-              ],
-              localizationsDelegates: const [
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
+          supportedLocales: const [
+            Locale('es', ''), // Español
+            Locale('en', ''), // English
+          ],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
 
-              // Fallback locale si el idioma del dispositivo no está soportado
-              localeResolutionCallback: (deviceLocale, supportedLocales) {
-                if (deviceLocale != null) {
-                  for (var supportedLocale in supportedLocales) {
-                    if (supportedLocale.languageCode ==
-                        deviceLocale.languageCode) {
-                      return supportedLocale;
-                    }
-                  }
+          // Fallback locale si el idioma del dispositivo no está soportado
+          localeResolutionCallback: (deviceLocale, supportedLocales) {
+            if (deviceLocale != null) {
+              for (var supportedLocale in supportedLocales) {
+                if (supportedLocale.languageCode == deviceLocale.languageCode) {
+                  return supportedLocale;
                 }
-                return supportedLocales.first; // Default: Español
-              },
+              }
+            }
+            return supportedLocales.first; // Default: Español
+          },
 
-              home: Builder(
-                builder: (navigatorContext) {
-                  return SplashScreen(
-                    onAnimationComplete: () {
-                      Navigator.of(navigatorContext).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
-                    },
+          home: Builder(
+            builder: (navigatorContext) {
+              return SplashScreen(
+                onAnimationComplete: () {
+                  Navigator.of(navigatorContext).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
                   );
                 },
-              ),
-              routes: {
-                '/login': (context) => const LoginScreen(),
-                '/home': (context) => const HomeScreen(),
-                '/check-in': (context) => const CheckInScreen(),
-                '/settings': (context) => const SettingsScreen(),
-                '/reports': (context) => const ReportsScreen(),
-                '/users': (context) {
-                  return Consumer(
-                    builder: (context, ref, _) {
-                      final authState = ref.watch(authNotifierProvider);
-                      return authState.when(
-                        data: (user) {
-                          if (user == null) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              Navigator.of(
-                                context,
-                              ).pushReplacementNamed('/login');
-                            });
-                            return const Scaffold(
-                              body: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          return const UserListPage();
-                        },
-                        loading: () => const Scaffold(
+              );
+            },
+          ),
+          routes: {
+            '/login': (context) => const LoginScreen(),
+            '/home': (context) => const HomeScreen(),
+            '/check-in': (context) => const CheckInScreen(),
+            '/settings': (context) => const SettingsScreen(),
+            '/reports': (context) => const ReportsScreen(),
+            '/users': (context) {
+              return Consumer(
+                builder: (context, ref, _) {
+                  final authState = ref.watch(authNotifierProvider);
+                  return authState.when(
+                    data: (user) {
+                      if (user == null) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          Navigator.of(context).pushReplacementNamed('/login');
+                        });
+                        return const Scaffold(
                           body: Center(child: CircularProgressIndicator()),
-                        ),
-                        error: (err, stack) =>
-                            Scaffold(body: Center(child: Text('Error: $err'))),
-                      );
+                        );
+                      }
+                      return const UserListPage();
                     },
+                    loading: () => const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (err, stack) =>
+                        Scaffold(body: Center(child: Text('Error: $err'))),
                   );
                 },
-                '/manager': (context) {
-                  // Obtener el usuario actual del provider
-                  return Consumer(
-                    builder: (context, ref, _) {
-                      final authState = ref.watch(authNotifierProvider);
-                      return authState.when(
-                        data: (user) {
-                          if (user == null) {
-                            // Si no hay usuario, redirigir a login
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              Navigator.of(
-                                context,
-                              ).pushReplacementNamed('/login');
-                            });
-                            return const Scaffold(
-                              body: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          return ManagerDashboardPage(user: user);
-                        },
-                        loading: () => const Scaffold(
+              );
+            },
+            '/manager': (context) {
+              // Obtener el usuario actual del provider
+              return Consumer(
+                builder: (context, ref, _) {
+                  final authState = ref.watch(authNotifierProvider);
+                  return authState.when(
+                    data: (user) {
+                      if (user == null) {
+                        // Si no hay usuario, redirigir a login
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          Navigator.of(context).pushReplacementNamed('/login');
+                        });
+                        return const Scaffold(
                           body: Center(child: CircularProgressIndicator()),
-                        ),
-                        error: (err, stack) =>
-                            Scaffold(body: Center(child: Text('Error: $err'))),
-                      );
+                        );
+                      }
+                      return ManagerDashboardPage(user: user);
                     },
+                    loading: () => const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (err, stack) =>
+                        Scaffold(body: Center(child: Text('Error: $err'))),
                   );
                 },
-                '/supervisor': (context) {
-                  return Consumer(
-                    builder: (context, ref, _) {
-                      final authState = ref.watch(authNotifierProvider);
-                      return authState.when(
-                        data: (user) {
-                          if (user == null) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              Navigator.of(
-                                context,
-                              ).pushReplacementNamed('/login');
-                            });
-                            return const Scaffold(
-                              body: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          return SupervisorDashboardPage(user: user);
-                        },
-                        loading: () => const Scaffold(
+              );
+            },
+            '/supervisor': (context) {
+              return Consumer(
+                builder: (context, ref, _) {
+                  final authState = ref.watch(authNotifierProvider);
+                  return authState.when(
+                    data: (user) {
+                      if (user == null) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          Navigator.of(context).pushReplacementNamed('/login');
+                        });
+                        return const Scaffold(
                           body: Center(child: CircularProgressIndicator()),
-                        ),
-                        error: (err, stack) =>
-                            Scaffold(body: Center(child: Text('Error: $err'))),
-                      );
+                        );
+                      }
+                      return SupervisorDashboardPage(user: user);
                     },
+                    loading: () => const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (err, stack) =>
+                        Scaffold(body: Center(child: Text('Error: $err'))),
                   );
                 },
-                '/worker': (context) {
-                  return Consumer(
-                    builder: (context, ref, _) {
-                      final authState = ref.watch(authNotifierProvider);
-                      return authState.when(
-                        data: (user) {
-                          if (user == null) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              Navigator.of(
-                                context,
-                              ).pushReplacementNamed('/login');
-                            });
-                            return const Scaffold(
-                              body: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          return WorkerDashboardPage(user: user);
-                        },
-                        loading: () => const Scaffold(
+              );
+            },
+            '/worker': (context) {
+              return Consumer(
+                builder: (context, ref, _) {
+                  final authState = ref.watch(authNotifierProvider);
+                  return authState.when(
+                    data: (user) {
+                      if (user == null) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          Navigator.of(context).pushReplacementNamed('/login');
+                        });
+                        return const Scaffold(
                           body: Center(child: CircularProgressIndicator()),
-                        ),
-                        error: (err, stack) =>
-                            Scaffold(body: Center(child: Text('Error: $err'))),
-                      );
+                        );
+                      }
+                      return WorkerDashboardPage(user: user);
                     },
+                    loading: () => const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (err, stack) =>
+                        Scaffold(body: Center(child: Text('Error: $err'))),
                   );
                 },
-                '/team-attendance': (context) => const TeamAttendanceListPage(),
-              },
-            ); // MaterialApp
-          }, // data
-        ); // themeModeAsync.when
+              );
+            },
+            '/team-attendance': (context) => const TeamAttendanceListPage(),
+          },
+        ); // MaterialApp
+      }, // data
+    ); // themeModeAsync.when
   }
 }
