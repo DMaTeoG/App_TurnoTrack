@@ -20,7 +20,7 @@ import 'presentation/pages/dashboards/worker_dashboard_page.dart';
 import 'presentation/pages/users/user_list_page.dart';
 import 'presentation/pages/attendance/team_attendance_list_page.dart';
 import 'presentation/providers/theme_provider.dart';
-import 'presentation/providers/locale_provider.dart';
+// Locale provider removed: app configured to use Spanish by default
 import 'presentation/providers/auth_provider.dart';
 
 void main() async {
@@ -70,9 +70,6 @@ class MyApp extends ConsumerWidget {
     // ✅ ACTUALIZADO: Watch AsyncValue del tema
     final themeModeAsync = ref.watch(themeModeProvider);
 
-    // ✅ ACTUALIZADO: Watch AsyncValue del idioma
-    final localeAsync = ref.watch(localeProvider);
-
     return themeModeAsync.when(
       loading: () => const MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -85,27 +82,15 @@ class MyApp extends ConsumerWidget {
         ),
       ),
       data: (themeMode) {
-        return localeAsync.when(
-          loading: () => const MaterialApp(
-            debugShowCheckedModeBanner: false,
-            home: Scaffold(body: Center(child: CircularProgressIndicator())),
-          ),
-          error: (error, stack) => MaterialApp(
-            debugShowCheckedModeBanner: false,
-            home: Scaffold(
-              body: Center(child: Text('Error al cargar idioma: $error')),
-            ),
-          ),
-          data: (locale) {
-            return MaterialApp(
-              title: AppStrings.appName,
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              themeMode: themeMode,
+        return MaterialApp(
+          title: AppStrings.appName,
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeMode,
 
-              // ✅ Configuración de i18n
-              locale: locale,
+          // Forzar idioma a Español
+          locale: const Locale('es', ''),
               supportedLocales: const [
                 Locale('es', ''), // Español
                 Locale('en', ''), // English
@@ -258,10 +243,8 @@ class MyApp extends ConsumerWidget {
                 },
                 '/team-attendance': (context) => const TeamAttendanceListPage(),
               },
-            );
-          },
-        );
-      },
-    );
+            ); // MaterialApp
+          }, // data
+        ); // themeModeAsync.when
   }
 }

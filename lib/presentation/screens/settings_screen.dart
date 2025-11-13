@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
-import '../providers/locale_provider.dart';
+// Locale switching removed: language selector deleted as requested
 import '../providers/notifications_settings_provider.dart';
 import '../pages/profile/profile_edit_page.dart';
 import '../pages/attendance/attendance_history_page.dart';
@@ -23,8 +23,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     // ✅ ACTUALIZADO: Watch AsyncValue del tema
     final themeModeAsync = ref.watch(themeModeProvider);
 
-    // ✅ ACTUALIZADO: Watch AsyncValue del idioma
-    final localeAsync = ref.watch(localeProvider);
+    // Idioma control eliminado en esta pantalla
 
     final notificationsEnabled = ref.watch(notificationsEnabledProvider);
 
@@ -34,67 +33,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),
         data: (themeMode) {
-          return localeAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(child: Text('Error: $error')),
-            data: (locale) {
-              return ListView(
+          return ListView(
+            children: [
+              // ✅ NUEVO: Perfil
+              _buildSection(
+                context,
+                icon: Icons.person,
+                title: 'Perfil',
                 children: [
-                  // ✅ NUEVO: Perfil
-                  _buildSection(
-                    context,
-                    icon: Icons.person,
-                    title: 'Perfil',
-                    children: [
-                      _buildProfileButton(theme),
-                      _buildAttendanceHistoryButton(theme),
-                    ],
-                  ),
-
-                  const Divider(height: 1),
-
-                  // Apariencia
-                  _buildSection(
-                    context,
-                    icon: Icons.palette,
-                    title: 'Apariencia',
-                    children: [_buildThemeSwitch(theme, themeMode)],
-                  ),
-
-                  const Divider(height: 1),
-
-                  // Notificaciones
-                  _buildSection(
-                    context,
-                    icon: Icons.notifications,
-                    title: 'Notificaciones',
-                    children: [
-                      _buildNotificationsSwitch(theme, notificationsEnabled),
-                    ],
-                  ),
-
-                  const Divider(height: 1),
-
-                  // Idioma
-                  _buildSection(
-                    context,
-                    icon: Icons.language,
-                    title: 'Idioma',
-                    children: [_buildLanguageSelector(theme, locale)],
-                  ),
-
-                  const Divider(height: 1),
-
-                  // Sesión
-                  _buildSection(
-                    context,
-                    icon: Icons.logout,
-                    title: 'Sesión',
-                    children: [_buildLogoutButton(theme)],
-                  ),
+                  _buildProfileButton(theme),
+                  _buildAttendanceHistoryButton(theme),
                 ],
-              );
-            },
+              ),
+
+              const Divider(height: 1),
+
+              // Apariencia
+              _buildSection(
+                context,
+                icon: Icons.palette,
+                title: 'Apariencia',
+                children: [_buildThemeSwitch(theme, themeMode)],
+              ),
+
+              const Divider(height: 1),
+
+              // Notificaciones
+              _buildSection(
+                context,
+                icon: Icons.notifications,
+                title: 'Notificaciones',
+                children: [
+                  _buildNotificationsSwitch(theme, notificationsEnabled),
+                ],
+              ),
+
+              const Divider(height: 1),
+
+              // Sesión
+              _buildSection(
+                context,
+                icon: Icons.logout,
+                title: 'Sesión',
+                children: [_buildLogoutButton(theme)],
+              ),
+            ],
           );
         },
       ),
@@ -177,43 +160,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildLanguageSelector(ThemeData theme, Locale currentLocale) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: SegmentedButton<String>(
-        segments: const [
-          ButtonSegment(
-            value: 'es',
-            label: Text('Español'),
-            icon: Icon(Icons.language),
-          ),
-          ButtonSegment(
-            value: 'en',
-            label: Text('English'),
-            icon: Icon(Icons.language),
-          ),
-        ],
-        selected: {currentLocale.languageCode},
-        onSelectionChanged: (Set<String> newSelection) {
-          final value = newSelection.first;
-
-          // ✅ Actualizar idioma usando LocaleProvider
-          ref.read(localeProvider.notifier).setLocale(Locale(value));
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                value == 'es'
-                    ? 'Idioma cambiado a Español'
-                    : 'Language changed to English',
-              ),
-              backgroundColor: Colors.green,
-            ),
-          );
-        },
-      ),
-    );
-  }
+  // Language selector removed
 
   Widget _buildProfileButton(ThemeData theme) {
     return ListTile(
