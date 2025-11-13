@@ -24,12 +24,17 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     // Get real data from provider
     final dateRange = DateRange.currentMonth();
     final kpisAsync = ref.watch(organizationKPIsProvider(dateRange));
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Panel Gerencial'),
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             icon: const Icon(Icons.people_alt),
@@ -121,12 +126,18 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
               const SizedBox(height: 16),
               Text(
                 'Error al cargar KPIs',
-                style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: 18,
+                  color: _mutedTextColor(),
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 error.toString(),
-                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _mutedTextColor(0.6),
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -168,6 +179,15 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
   }
 
   Widget _buildPeriodSelector() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final outlineColor = colorScheme.outlineVariant.withValues(
+      alpha: theme.brightness == Brightness.dark ? 0.4 : 0.2,
+    );
+    final unselectedColor =
+        theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7) ??
+            Colors.grey.shade700;
+
     return Card(
       elevation: 2,
       child: Padding(
@@ -183,14 +203,21 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
-                    color: isSelected ? Colors.blue : Colors.transparent,
+                    color: isSelected
+                        ? colorScheme.primary
+                        : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected ? Colors.transparent : outlineColor,
+                    ),
                   ),
                   child: Text(
                     period,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.grey[700],
+                      color: isSelected
+                          ? colorScheme.onPrimary
+                          : unselectedColor,
                       fontWeight: isSelected
                           ? FontWeight.bold
                           : FontWeight.normal,
@@ -275,6 +302,14 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     required String trend,
     required bool trendUp,
   }) {
+    final theme = Theme.of(context);
+    final secondaryText =
+        theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7) ??
+            Colors.grey.shade600;
+    final tertiaryText =
+        theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6) ??
+            Colors.grey.shade500;
+
     return Card(
       elevation: 2,
       child: Padding(
@@ -293,7 +328,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                     horizontal: 6,
                     vertical: 2,
                   ),
-                  decoration: BoxDecoration(
+                   decoration: BoxDecoration(
                     color: (trendUp ? Colors.green : Colors.red).withValues(
                       alpha: 0.1,
                     ),
@@ -331,20 +366,20 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
             ),
             const SizedBox(height: 2),
             // Título
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
+             Text(
+               title,
+               style: TextStyle(
+                 fontSize: 12,
+                 color: secondaryText,
+                 fontWeight: FontWeight.w500,
+               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             // Subtitle
             Text(
               subtitle,
-              style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+              style: TextStyle(fontSize: 10, color: tertiaryText),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -430,13 +465,13 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                           Icon(
                             Icons.inbox_outlined,
                             size: 48,
-                            color: Colors.grey[400],
+                            color: _mutedTextColor(0.4),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'No hay datos de tendencia disponibles',
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              color: _mutedTextColor(),
                               fontSize: 14,
                             ),
                           ),
@@ -468,7 +503,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                         horizontalInterval: 20,
                         getDrawingHorizontalLine: (value) {
                           return FlLine(
-                            color: Colors.grey[200],
+                            color: _surfaceStrokeColor(),
                             strokeWidth: 1,
                           );
                         },
@@ -572,7 +607,10 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                       const SizedBox(height: 12),
                       Text(
                         'Error al cargar tendencia',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                        style: TextStyle(
+                          color: _mutedTextColor(),
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -603,7 +641,10 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: _mutedTextColor()),
+        ),
       ],
     );
   }
@@ -635,13 +676,13 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                           Icon(
                             Icons.pie_chart_outline,
                             size: 48,
-                            color: Colors.grey[400],
+                            color: _mutedTextColor(0.4),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'No hay datos de desempeño disponibles',
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              color: _mutedTextColor(),
                               fontSize: 14,
                             ),
                           ),
@@ -733,9 +774,12 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                         color: Colors.red[300],
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        'Error al cargar distribución',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              Text(
+                'Error al cargar distribución',
+                style: TextStyle(
+                  color: _mutedTextColor(),
+                  fontSize: 14,
+                ),
                       ),
                     ],
                   ),
@@ -766,7 +810,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
             ),
             Text(
               '$value empleados',
-              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 11, color: _mutedTextColor()),
             ),
           ],
         ),
@@ -811,13 +855,13 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                           Icon(
                             Icons.people_outline,
                             size: 48,
-                            color: Colors.grey[400],
+                            color: _mutedTextColor(0.4),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'No hay supervisores registrados',
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              color: _mutedTextColor(),
                               fontSize: 14,
                             ),
                           ),
@@ -837,7 +881,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
-                      color: Colors.grey[50],
+                      color: Theme.of(context).cardColor,
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor: hasTeam ? Colors.blue : Colors.grey,
@@ -852,7 +896,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                               ? '${supervisor.teamSize} personas en equipo'
                               : 'Sin equipo asignado',
                           style: TextStyle(
-                            color: hasTeam ? null : Colors.grey[600],
+                            color: hasTeam ? null : _mutedTextColor(),
                             fontStyle: hasTeam ? null : FontStyle.italic,
                           ),
                         ),
@@ -895,10 +939,13 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                         color: Colors.red[300],
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        'Error al cargar supervisores',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                      ),
+              Text(
+                'Error al cargar supervisores',
+                style: TextStyle(
+                  color: _mutedTextColor(),
+                  fontSize: 14,
+                ),
+              ),
                     ],
                   ),
                 ),
@@ -931,23 +978,23 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.business_outlined,
-                            size: 48,
-                            color: Colors.grey[400],
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.business_outlined,
+                          size: 48,
+                          color: _mutedTextColor(0.4),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No hay datos de áreas disponibles',
+                          style: TextStyle(
+                            color: _mutedTextColor(),
+                            fontSize: 14,
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No hay datos de áreas disponibles',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
                     ),
                   );
                 }
@@ -992,7 +1039,10 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                       const SizedBox(height: 12),
                       Text(
                         'Error al cargar comparativa',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                        style: TextStyle(
+                          color: _mutedTextColor(),
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -1037,7 +1087,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
             child: LinearProgressIndicator(
               value: score / 100,
               minHeight: 8,
-              backgroundColor: Colors.grey[200],
+              backgroundColor: _surfaceStrokeColor(0.2),
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
@@ -1075,7 +1125,10 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                   const SizedBox(height: 4),
                   Text(
                     '¡Todo está funcionando correctamente!',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    style: TextStyle(
+                      color: _mutedTextColor(),
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
@@ -1165,7 +1218,10 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
               const SizedBox(height: 12),
               Text(
                 'Verificando alertas...',
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                style: TextStyle(
+                  color: _mutedTextColor(),
+                  fontSize: 14,
+                ),
               ),
             ],
           ),
@@ -1181,7 +1237,10 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
               const SizedBox(height: 12),
               Text(
                 'Error al cargar alertas',
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                style: TextStyle(
+                  color: _mutedTextColor(),
+                  fontSize: 14,
+                ),
               ),
             ],
           ),
@@ -1195,25 +1254,32 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
+      builder: (context) => Center(
         child: Card(
           child: Padding(
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Generando análisis estratégico...'),
-                SizedBox(height: 8),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                const Text('Generando análisis estratégico...'),
+                const SizedBox(height: 8),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.auto_awesome, size: 16, color: Colors.orange),
-                    SizedBox(width: 4),
+                    const Icon(Icons.auto_awesome, size: 16, color: Colors.orange),
+                    const SizedBox(width: 4),
                     Text(
                       'Powered by Google Gemini',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.color
+                            ?.withValues(alpha: 0.7),
+                      ),
                     ),
                   ],
                 ),
@@ -1355,5 +1421,18 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
         ),
       );
     }
+  }
+
+  Color _mutedTextColor([double opacity = 0.6]) {
+    final theme = Theme.of(context);
+    final base = theme.textTheme.bodyMedium?.color ??
+        (theme.brightness == Brightness.dark ? Colors.white : Colors.black87);
+    final double alpha = opacity.clamp(0.0, 1.0).toDouble();
+    return base.withValues(alpha: alpha);
+  }
+
+  Color _surfaceStrokeColor([double opacity = 0.12]) {
+    final theme = Theme.of(context);
+    return theme.colorScheme.onSurface.withValues(alpha: opacity);
   }
 }

@@ -27,13 +27,17 @@ class _SupervisorDashboardPageState
       teamPerformanceMetricsProvider(dateRange),
     );
     final aiCoachingState = ref.watch(aiCoachingProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Mi Equipo'),
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             icon: const Icon(Icons.people_alt),
@@ -152,12 +156,18 @@ class _SupervisorDashboardPageState
               const SizedBox(height: 16),
               Text(
                 'Error al cargar datos del equipo',
-                style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: 18,
+                  color: _mutedTextColor(),
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 error.toString(),
-                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _mutedTextColor(0.6),
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -256,14 +266,22 @@ class _SupervisorDashboardPageState
                   icon: Icons.star,
                   color: Colors.amber,
                 ),
-                Container(width: 1, height: 40, color: Colors.grey[300]),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: _surfaceStrokeColor(0.2),
+                ),
                 _buildStatColumn(
                   label: 'Activos Hoy',
                   value: '${teamSize - teamAbsentToday}',
                   icon: Icons.check_circle,
                   color: Colors.green,
                 ),
-                Container(width: 1, height: 40, color: Colors.grey[300]),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: _surfaceStrokeColor(0.2),
+                ),
                 _buildStatColumn(
                   label: 'Puntualidad',
                   value: teamSize > 0
@@ -297,7 +315,7 @@ class _SupervisorDashboardPageState
         Text(
           label,
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          style: TextStyle(fontSize: 12, color: _mutedTextColor()),
         ),
       ],
     );
@@ -328,7 +346,7 @@ class _SupervisorDashboardPageState
             ),
             Text(
               title,
-              style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              style: TextStyle(fontSize: 13, color: _mutedTextColor()),
             ),
           ],
         ),
@@ -374,13 +392,13 @@ class _SupervisorDashboardPageState
                           Icon(
                             Icons.bar_chart_outlined,
                             size: 48,
-                            color: Colors.grey[400],
+                            color: _mutedTextColor(0.4),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'No hay datos esta semana',
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              color: _mutedTextColor(),
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
                             ),
@@ -390,7 +408,7 @@ class _SupervisorDashboardPageState
                             'Los datos aparecerán cuando tu equipo\nregistre asistencia y ventas',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: Colors.grey[500],
+                              color: _mutedTextColor(0.7),
                               fontSize: 12,
                             ),
                           ),
@@ -434,13 +452,13 @@ class _SupervisorDashboardPageState
                           Icon(
                             Icons.insert_chart_outlined,
                             size: 48,
-                            color: Colors.grey[400],
+                            color: _mutedTextColor(0.4),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'Sin actividad registrada',
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              color: _mutedTextColor(),
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
                             ),
@@ -450,7 +468,7 @@ class _SupervisorDashboardPageState
                             'Agrega asistencia y ventas para ver el gráfico',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: Colors.grey[500],
+                              color: _mutedTextColor(0.7),
                               fontSize: 12,
                             ),
                           ),
@@ -467,7 +485,7 @@ class _SupervisorDashboardPageState
                         horizontalInterval: 20,
                         getDrawingHorizontalLine: (value) {
                           return FlLine(
-                            color: Colors.grey[200],
+                            color: _surfaceStrokeColor(),
                             strokeWidth: 1,
                           );
                         },
@@ -527,7 +545,7 @@ class _SupervisorDashboardPageState
                 error: (error, stack) => Center(
                   child: Text(
                     'Error al cargar gráfica',
-                    style: TextStyle(color: Colors.grey[600]),
+                    style: TextStyle(color: _mutedTextColor()),
                   ),
                 ),
               ),
@@ -579,7 +597,7 @@ class _SupervisorDashboardPageState
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
                     'No hay datos disponibles',
-                    style: TextStyle(color: Colors.grey[600]),
+                    style: TextStyle(color: _mutedTextColor()),
                   ),
                 ),
               )
@@ -617,7 +635,7 @@ class _SupervisorDashboardPageState
                               '${performer.totalCheckIns} check-ins',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey[600],
+                                color: _mutedTextColor(),
                               ),
                             ),
                           ],
@@ -723,11 +741,15 @@ class _SupervisorDashboardPageState
                                 maxLines: 3,
                               ),
                               const SizedBox(height: 12),
-                              const Text(
+                              Text(
                                 'El trabajador recibirá una notificación',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.color
+                                      ?.withValues(alpha: 0.7),
                                 ),
                               ),
                             ],
@@ -797,7 +819,7 @@ class _SupervisorDashboardPageState
                 state.advice!,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[800],
+                  color: _mutedTextColor(),
                   height: 1.5,
                 ),
               )
@@ -806,7 +828,7 @@ class _SupervisorDashboardPageState
                 'Genera un análisis automático con insights y recomendaciones para tu equipo.',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[600],
+                  color: _mutedTextColor(),
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -821,25 +843,32 @@ class _SupervisorDashboardPageState
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
+      builder: (context) => Center(
         child: Card(
           child: Padding(
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Generando análisis del equipo...'),
-                SizedBox(height: 8),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                const Text('Generando análisis del equipo...'),
+                const SizedBox(height: 8),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.auto_awesome, size: 16, color: Colors.orange),
-                    SizedBox(width: 4),
+                    const Icon(Icons.auto_awesome, size: 16, color: Colors.orange),
+                    const SizedBox(width: 4),
                     Text(
                       'Powered by Google Gemini',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.color
+                            ?.withValues(alpha: 0.7),
+                      ),
                     ),
                   ],
                 ),
@@ -990,5 +1019,18 @@ class _SupervisorDashboardPageState
         );
       },
     );
+  }
+
+  Color _mutedTextColor([double opacity = 0.6]) {
+    final theme = Theme.of(context);
+    final base = theme.textTheme.bodyMedium?.color ??
+        (theme.brightness == Brightness.dark ? Colors.white : Colors.black87);
+    final double alpha = opacity.clamp(0.0, 1.0).toDouble();
+    return base.withValues(alpha: alpha);
+  }
+
+  Color _surfaceStrokeColor([double opacity = 0.12]) {
+    final theme = Theme.of(context);
+    return theme.colorScheme.onSurface.withValues(alpha: opacity);
   }
 }
