@@ -715,9 +715,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// Muestra los consejos IA en un diálogo (motivacional, sin presión)
   Future<void> _showAIRecommendations() async {
     final user = ref.read(currentUserProvider).value;
-    if (user == null) return;
+    if (user == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Usuario no encontrado')));
+      return;
+    }
 
-    // Mostrar loading directamente (el botón YA es la confirmación)
+    // Mostrar loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -750,161 +755,133 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
 
-    // Obtener métricas del usuario
-    final dateRange = DateRange.currentMonth();
-    final metricsAsync = ref.read(userPerformanceMetricsProvider(dateRange));
+    try {
+      // Obtener métricas del usuario
+      final dateRange = DateRange.currentMonth();
+      final metrics = await ref.read(
+        userPerformanceMetricsProvider(dateRange).future,
+      );
 
-    await metricsAsync.when(
-      data: (metrics) async {
-        try {
-          // Llamar a Gemini con tipo MOTIVACIONAL
-          await ref
-              .read(aiCoachingProvider.notifier)
-              .generateAdvice(
-                user: user,
-                metrics: metrics,
-                language: 'es',
-                coachingType: 'motivational', // Tipo motivacional para Home
-              );
-
-          if (!mounted) return;
-
-          // Cerrar loading
-          Navigator.pop(context);
-
-          // Obtener el consejo generado
-          final aiState = ref.read(aiCoachingProvider);
-
-          if (aiState.advice != null) {
-            // Mostrar resultados en diálogo
-            await showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                backgroundColor: Colors.transparent,
-                contentPadding: EdgeInsets.zero,
-                content: Container(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.green.shade400, Colors.teal.shade400],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(
-                            Icons.auto_awesome,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Consejos Motivacionales',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Container(
-                        constraints: const BoxConstraints(maxHeight: 400),
-                        child: SingleChildScrollView(
-                          child: Text(
-                            aiState.advice!,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.green,
-                            ),
-                            child: const Text('Entendido'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          } else {
-            throw Exception('No se generó ningún consejo');
-          }
-        } catch (e) {
-          if (!mounted) return;
-          Navigator.pop(context); // Cerrar loading
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al generar consejos: $e'),
-              backgroundColor: Colors.red,
-            ),
+      // Llamar a Gemini con tipo MOTIVACIONAL
+      await ref
+          .read(aiCoachingProvider.notifier)
+          .generateAdvice(
+            user: user,
+            metrics: metrics,
+            language: 'es',
+            coachingType: 'motivational',
           );
-        }
-      },
-      loading: () {
-        if (!mounted) return;
-        Navigator.pop(context);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cargando métricas...'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      },
-      error: (error, _) async {
-        if (!mounted) return;
-        Navigator.pop(context); // Cerrar loading
+      if (!mounted) return;
 
-        // Mostrar mensaje motivacional genérico
+      // Cerrar loading
+      Navigator.pop(context);
+
+      // Obtener el consejo generado
+      final aiState = ref.read(aiCoachingProvider);
+
+      if (aiState.advice != null) {
+        // Mostrar resultados en diálogo
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.lightbulb_outline, color: Colors.blue),
-                SizedBox(width: 8),
-                Text('Consejo del Día'),
-              ],
-            ),
-            content: const Text(
-              '¡Hoy es un buen día para dar lo mejor de ti! 💫\n\n'
-              'Recuerda: la puntualidad y la constancia son clave para el éxito.',
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Entendido'),
+            backgroundColor: Colors.transparent,
+            contentPadding: EdgeInsets.zero,
+            content: Container(
+              constraints: const BoxConstraints(maxWidth: 400),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.green.shade400, Colors.teal.shade400],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
               ),
-            ],
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.auto_awesome, color: Colors.white, size: 28),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Consejos Motivacionales',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 400),
+                    child: SingleChildScrollView(
+                      child: Text(
+                        aiState.advice!,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.green,
+                        ),
+                        child: const Text('Entendido'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         );
-      },
-    );
+      } else {
+        throw Exception('No se generó ningún consejo');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Cerrar loading
+
+      // Mostrar mensaje motivacional genérico en caso de error
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.lightbulb_outline, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Consejo del Día'),
+            ],
+          ),
+          content: const Text(
+            '¡Hoy es un buen día para dar lo mejor de ti! 💫\n\n'
+            'Recuerda: la puntualidad y la constancia son clave para el éxito.',
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Widget _buildBottomNav(ThemeData theme) {

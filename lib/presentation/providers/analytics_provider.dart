@@ -91,12 +91,26 @@ final organizationKPIsProvider = FutureProvider.autoDispose
 // Provider de ranking
 final performanceRankingProvider = FutureProvider.autoDispose
     .family<List<PerformanceMetrics>, RankingParams>((ref, params) async {
-      final repository = ref.read(analyticsRepositoryProvider);
-      return await repository.getRanking(
-        startDate: params.dateRange.startDate,
-        endDate: params.dateRange.endDate,
-        limit: params.limit,
-      );
+      print('🏆 [RANKING] Solicitando ranking...');
+      print('🏆 [RANKING] Fecha inicio: ${params.dateRange.startDate}');
+      print('🏆 [RANKING] Fecha fin: ${params.dateRange.endDate}');
+      print('🏆 [RANKING] Límite: ${params.limit}');
+
+      try {
+        final repository = ref.read(analyticsRepositoryProvider);
+        final result = await repository.getRanking(
+          startDate: params.dateRange.startDate,
+          endDate: params.dateRange.endDate,
+          limit: params.limit,
+        );
+
+        print('🏆 [RANKING] ✅ Datos recibidos: ${result.length} usuarios');
+        return result;
+      } catch (e, stack) {
+        print('🏆 [RANKING] ❌ ERROR: $e');
+        print('🏆 [RANKING] Stack: $stack');
+        rethrow;
+      }
     });
 
 // ============================================
