@@ -126,18 +126,12 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
               const SizedBox(height: 16),
               Text(
                 'Error al cargar KPIs',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: _mutedTextColor(),
-                ),
+                style: TextStyle(fontSize: 18, color: _mutedTextColor()),
               ),
               const SizedBox(height: 8),
               Text(
                 error.toString(),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: _mutedTextColor(0.6),
-                ),
+                style: TextStyle(fontSize: 14, color: _mutedTextColor(0.6)),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -186,7 +180,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     );
     final unselectedColor =
         theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7) ??
-            Colors.grey.shade700;
+        Colors.grey.shade700;
 
     return Card(
       elevation: 2,
@@ -247,7 +241,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
-      childAspectRatio: 1.4,
+      childAspectRatio: 1.2,
       children: [
         _buildKPICard(
           title: 'Empleados Totales',
@@ -305,18 +299,18 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     final theme = Theme.of(context);
     final secondaryText =
         theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7) ??
-            Colors.grey.shade600;
+        Colors.grey.shade600;
     final tertiaryText =
         theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6) ??
-            Colors.grey.shade500;
+        Colors.grey.shade500;
 
     return Card(
       elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header con icono y trend
             Row(
@@ -328,7 +322,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                     horizontal: 6,
                     vertical: 2,
                   ),
-                   decoration: BoxDecoration(
+                  decoration: BoxDecoration(
                     color: (trendUp ? Colors.green : Colors.red).withValues(
                       alpha: 0.1,
                     ),
@@ -366,13 +360,13 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
             ),
             const SizedBox(height: 2),
             // Título
-             Text(
-               title,
-               style: TextStyle(
-                 fontSize: 12,
-                 color: secondaryText,
-                 fontWeight: FontWeight.w500,
-               ),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                color: secondaryText,
+                fontWeight: FontWeight.w500,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -389,248 +383,234 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     );
   }
 
-  Widget _buildAttendanceTrendChart() {
-    final trendAsync = ref.watch(attendanceTrendProvider);
+Widget _buildAttendanceTrendChart() {
+  final trendAsync = ref.watch(attendanceTrendProvider);
 
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Tendencia de Asistencia',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+  return Card(
+    elevation: 2,
+    child: Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Tendencia de Asistencia',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 8),
-                trendAsync.when(
-                  data: (trends) {
-                    if (trends.isEmpty) return const SizedBox.shrink();
-                    final lastTwo = trends.length >= 2
-                        ? trends.sublist(trends.length - 2)
-                        : trends;
-                    final isPositive =
-                        lastTwo.length == 2 &&
-                        lastTwo.last.punctualityRate >
-                            lastTwo.first.punctualityRate;
-
-                    return Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: (isPositive ? Colors.green : Colors.orange)
-                              .withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          isPositive
-                              ? '↑ Tendencia positiva'
-                              : '↓ Tendencia negativa',
-                          style: TextStyle(
-                            color: isPositive ? Colors.green : Colors.orange,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    );
-                  },
-                  loading: () => const SizedBox.shrink(),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 200,
-              child: trendAsync.when(
+              ),
+              const SizedBox(width: 8),
+              trendAsync.when(
                 data: (trends) {
-                  if (trends.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.inbox_outlined,
-                            size: 48,
-                            color: _mutedTextColor(0.4),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No hay datos de tendencia disponibles',
-                            style: TextStyle(
-                              color: _mutedTextColor(),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+                  if (trends.isEmpty) return const SizedBox.shrink();
+                  final lastTwo = trends.length >= 2
+                      ? trends.sublist(trends.length - 2)
+                      : trends;
+                  final isPositive =
+                      lastTwo.length == 2 &&
+                      lastTwo.last.punctualityRate >
+                          lastTwo.first.punctualityRate;
 
-                  final months = [
-                    'Ene',
-                    'Feb',
-                    'Mar',
-                    'Abr',
-                    'May',
-                    'Jun',
-                    'Jul',
-                    'Ago',
-                    'Sep',
-                    'Oct',
-                    'Nov',
-                    'Dic',
-                  ];
-
-                  return LineChart(
-                    LineChartData(
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        horizontalInterval: 20,
-                        getDrawingHorizontalLine: (value) {
-                          return FlLine(
-                            color: _surfaceStrokeColor(),
-                            strokeWidth: 1,
-                          );
-                        },
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: (isPositive ? Colors.green : Colors.orange)
+                          .withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      isPositive
+                          ? '↑ Tendencia positiva'
+                          : '↓ Tendencia negativa',
+                      style: TextStyle(
+                        color: isPositive ? Colors.green : Colors.orange,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
-                      titlesData: FlTitlesData(
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            getTitlesWidget: (value, meta) {
-                              if (value.toInt() >= 0 &&
-                                  value.toInt() < trends.length) {
-                                final month = trends[value.toInt()].month;
-                                return Text(
-                                  months[month.month - 1],
-                                  style: const TextStyle(fontSize: 10),
-                                );
-                              }
-                              return const Text('');
-                            },
-                          ),
-                        ),
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 40,
-                            getTitlesWidget: (value, meta) {
-                              return Text(
-                                '${value.toInt()}%',
-                                style: const TextStyle(fontSize: 10),
-                              );
-                            },
-                          ),
-                        ),
-                        topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      lineBarsData: [
-                        // Asistencia
-                        LineChartBarData(
-                          spots: trends
-                              .asMap()
-                              .entries
-                              .map(
-                                (e) => FlSpot(
-                                  e.key.toDouble(),
-                                  e.value.attendanceRate,
-                                ),
-                              )
-                              .toList(),
-                          isCurved: true,
-                          color: Colors.blue,
-                          barWidth: 3,
-                          dotData: const FlDotData(show: true),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: Colors.blue.withValues(alpha: 0.1),
-                          ),
-                        ),
-                        // Puntualidad
-                        LineChartBarData(
-                          spots: trends
-                              .asMap()
-                              .entries
-                              .map(
-                                (e) => FlSpot(
-                                  e.key.toDouble(),
-                                  e.value.punctualityRate,
-                                ),
-                              )
-                              .toList(),
-                          isCurved: true,
-                          color: Colors.green,
-                          barWidth: 3,
-                          dotData: const FlDotData(show: true),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: Colors.green.withValues(alpha: 0.1),
-                          ),
-                        ),
-                      ],
-                      minY: 0,
-                      maxY: 100,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 48,
-                        color: Colors.red[300],
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 200,
+            child: trendAsync.when(
+              data: (trends) {
+                if (trends.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inbox_outlined,
+                          size: 48,
+                          color: _mutedTextColor(0.4),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No hay datos de tendencia disponibles',
+                          style: TextStyle(
+                            color: _mutedTextColor(),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final months = [
+                  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+                  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+                ];
+
+                return LineChart(
+                  LineChartData(
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      horizontalInterval: 20,
+                      getDrawingHorizontalLine: (value) {
+                        return FlLine(
+                          color: _surfaceStrokeColor(),
+                          strokeWidth: 1,
+                        );
+                      },
+                    ),
+                    titlesData: FlTitlesData(
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (value, meta) {
+                            if (value.toInt() >= 0 &&
+                                value.toInt() < trends.length) {
+                              final month = trends[value.toInt()].month;
+                              return Text(
+                                months[month.month - 1],
+                                style: const TextStyle(fontSize: 10),
+                              );
+                            }
+                            return const Text('');
+                          },
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Error al cargar tendencia',
-                        style: TextStyle(
-                          color: _mutedTextColor(),
-                          fontSize: 14,
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 40,
+                          getTitlesWidget: (value, meta) {
+                            return Text(
+                              '${value.toInt()}%',
+                              style: const TextStyle(fontSize: 10),
+                            );
+                          },
+                        ),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    lineBarsData: [
+                      // Asistencia
+                      LineChartBarData(
+                        spots: trends
+                            .asMap()
+                            .entries
+                            .map((e) => FlSpot(
+                                  e.key.toDouble(),
+                                  e.value.attendanceRate,
+                                ))
+                            .toList(),
+                        isCurved: true,
+                        color: Colors.blue,
+                        barWidth: 3,
+                        dotData: const FlDotData(show: true),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: Colors.blue.withValues(alpha: 0.1),
+                        ),
+                      ),
+                      // Puntualidad
+                      LineChartBarData(
+                        spots: trends
+                            .asMap()
+                            .entries
+                            .map((e) => FlSpot(
+                                  e.key.toDouble(),
+                                  e.value.punctualityRate,
+                                ))
+                            .toList(),
+                        isCurved: true,
+                        color: Colors.green,
+                        barWidth: 3,
+                        dotData: const FlDotData(show: true),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: Colors.green.withValues(alpha: 0.1),
                         ),
                       ),
                     ],
+                    minY: 0,
+                    maxY: 100,
                   ),
+                );
+              },
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red[300],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Error al cargar tendencia',
+                      style: TextStyle(
+                        color: _mutedTextColor(),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildLegendItem('Asistencia', Colors.blue),
-                const SizedBox(width: 20),
-                _buildLegendItem('Puntualidad', Colors.green),
-              ],
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLegendItem('Asistencia', Colors.blue),
+              const SizedBox(width: 20),
+              _buildLegendItem('Puntualidad', Colors.green),
+            ],
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildLegendItem(String label, Color color) {
     return Row(
@@ -641,59 +621,60 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: _mutedTextColor()),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: _mutedTextColor())),
       ],
     );
   }
 
-  Widget _buildPerformanceDistribution() {
-    final distributionAsync = ref.watch(performanceDistributionProvider);
 
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Distribución de Desempeño',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 200,
-              child: distributionAsync.when(
-                data: (distribution) {
-                  if (distribution.total == 0) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.pie_chart_outline,
-                            size: 48,
-                            color: _mutedTextColor(0.4),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No hay datos de desempeño disponibles',
-                            style: TextStyle(
-                              color: _mutedTextColor(),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+Widget _buildPerformanceDistribution() {
+  final distributionAsync = ref.watch(performanceDistributionProvider);
 
-                  return Row(
+  return Card(
+    elevation: 2,
+    child: Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Distribución de Desempeño',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 200,
+            child: distributionAsync.when(
+              data: (distribution) {
+                if (distribution.total == 0) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.pie_chart_outline,
+                          size: 48,
+                          color: _mutedTextColor(0.4),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No hay datos de desempeño disponibles',
+                          style: TextStyle(
+                            color: _mutedTextColor(),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
                     children: [
-                      Expanded(
+                      SizedBox(
+                        width: 180,
                         child: PieChart(
                           PieChartData(
                             sectionsSpace: 2,
@@ -761,37 +742,36 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                         ],
                       ),
                     ],
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 48,
-                        color: Colors.red[300],
-                      ),
-                      const SizedBox(height: 12),
-              Text(
-                'Error al cargar distribución',
-                style: TextStyle(
-                  color: _mutedTextColor(),
-                  fontSize: 14,
-                ),
-                      ),
-                    ],
                   ),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Error al cargar distribución',
+                      style: TextStyle(
+                        color: _mutedTextColor(),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
+  
+  
   Widget _buildPerformanceLabel(String label, Color color, int value) {
     return Row(
       children: [
@@ -939,13 +919,13 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                         color: Colors.red[300],
                       ),
                       const SizedBox(height: 12),
-              Text(
-                'Error al cargar supervisores',
-                style: TextStyle(
-                  color: _mutedTextColor(),
-                  fontSize: 14,
-                ),
-              ),
+                      Text(
+                        'Error al cargar supervisores',
+                        style: TextStyle(
+                          color: _mutedTextColor(),
+                          fontSize: 14,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -978,23 +958,23 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.business_outlined,
-                          size: 48,
-                          color: _mutedTextColor(0.4),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No hay datos de áreas disponibles',
-                          style: TextStyle(
-                            color: _mutedTextColor(),
-                            fontSize: 14,
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.business_outlined,
+                            size: 48,
+                            color: _mutedTextColor(0.4),
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No hay datos de áreas disponibles',
+                            style: TextStyle(
+                              color: _mutedTextColor(),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }
@@ -1125,10 +1105,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                   const SizedBox(height: 4),
                   Text(
                     '¡Todo está funcionando correctamente!',
-                    style: TextStyle(
-                      color: _mutedTextColor(),
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: _mutedTextColor(), fontSize: 14),
                   ),
                 ],
               ),
@@ -1218,10 +1195,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
               const SizedBox(height: 12),
               Text(
                 'Verificando alertas...',
-                style: TextStyle(
-                  color: _mutedTextColor(),
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: _mutedTextColor(), fontSize: 14),
               ),
             ],
           ),
@@ -1237,10 +1211,7 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
               const SizedBox(height: 12),
               Text(
                 'Error al cargar alertas',
-                style: TextStyle(
-                  color: _mutedTextColor(),
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: _mutedTextColor(), fontSize: 14),
               ),
             ],
           ),
@@ -1268,17 +1239,19 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.auto_awesome, size: 16, color: Colors.orange),
+                    const Icon(
+                      Icons.auto_awesome,
+                      size: 16,
+                      color: Colors.orange,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Powered by Google Gemini',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.color
-                            ?.withValues(alpha: 0.7),
+                        color: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -1425,7 +1398,8 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
 
   Color _mutedTextColor([double opacity = 0.6]) {
     final theme = Theme.of(context);
-    final base = theme.textTheme.bodyMedium?.color ??
+    final base =
+        theme.textTheme.bodyMedium?.color ??
         (theme.brightness == Brightness.dark ? Colors.white : Colors.black87);
     final double alpha = opacity.clamp(0.0, 1.0).toDouble();
     return base.withValues(alpha: alpha);

@@ -115,9 +115,31 @@ class MyApp extends ConsumerWidget {
 
           home: Builder(
             builder: (navigatorContext) {
+              print('✅ SplashScreen mostrado');
               return SplashScreen(
-                onAnimationComplete: () =>
-                    _navigateAfterSplash(navigatorContext, ref),
+                onAnimationComplete: () async {
+                  print('🚀 Animación terminada');
+                  final user = await ref.read(authNotifierProvider.future);
+                  print('👤 Usuario leído: $user');
+
+                  if (!navigatorContext.mounted) return;
+
+                  if (user == null) {
+                    print('🔑 No hay sesión activa. Mostrando login.');
+                    Navigator.of(
+                      navigatorContext,
+                    ).pushReplacementNamed('/login');
+                  } else {
+                    print('🧭 Usuario autenticado. Rol: ${user.role}');
+                    Navigator.of(navigatorContext).pushReplacementNamed(
+                      switch (user.role.toLowerCase()) {
+                        'manager' => '/manager',
+                        'supervisor' => '/supervisor',
+                        _ => '/home',
+                      },
+                    );
+                  }
+                },
               );
             },
           ),
