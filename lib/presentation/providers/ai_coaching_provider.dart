@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/ai_fallback_advice.dart';
 import '../../core/services/gemini_ai_service.dart';
 import '../../data/models/user_model.dart';
 
@@ -55,25 +56,14 @@ class AICoachingNotifier extends Notifier<AICoachingState> {
   }) async {
     state = state.copyWith(isLoading: true, error: null);
 
-    try {
-      final advice = await _service.generateCoachingAdvice(
-        user: user,
-        metrics: metrics,
-        language: language,
-        coachingType: coachingType,
-      );
+    final fallback = AIFallbackAdvice.getRandomAdvice(user.role);
 
-      state = state.copyWith(
-        isLoading: false,
-        advice: advice,
-        lastUpdated: DateTime.now(),
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Error generando consejo: ${e.toString()}',
-      );
-    }
+    state = state.copyWith(
+      isLoading: false,
+      advice: fallback,
+      error: null,
+      lastUpdated: DateTime.now(),
+    );
   }
 
   /// Generate team summary for supervisors

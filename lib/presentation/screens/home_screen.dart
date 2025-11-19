@@ -12,6 +12,8 @@ import '../../core/widgets/animated_widgets.dart';
 import '../pages/ranking/ranking_page.dart';
 import '../pages/dashboards/worker_dashboard_page.dart';
 import '../pages/sales/sales_page.dart';
+import '../../core/constants/ai_fallback_advice.dart';
+import '../widgets/ai_advice_message.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -712,7 +714,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ).animate().fadeIn(delay: 600.ms).scale(delay: 600.ms);
   }
 
-  /// Muestra los consejos IA en un diálogo (motivacional, sin presión)
+  /// Muestra los consejos IA en un componente básico (sin peticiones remotas)
   Future<void> _showAIRecommendations() async {
     final user = ref.read(currentUserProvider).value;
     if (user == null) {
@@ -722,166 +724,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return;
     }
 
-    // Mostrar loading
-    showDialog(
+    final advice = AIFallbackAdvice.getRandomAdvice(user.role);
+
+    if (!mounted) return;
+
+    await showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Generando consejos motivacionales...'),
-                SizedBox(height: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.favorite, size: 16, color: Colors.pink),
-                    SizedBox(width: 4),
-                    Text(
-                      'Powered by Google Gemini',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(16).add(
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        ),
+        child: AIAdviceMessage(
+          title: 'Consejo motivacional',
+          message: advice,
         ),
       ),
     );
-
-    try {
-      // Obtener métricas del usuario
-      final dateRange = DateRange.currentMonth();
-      final metrics = await ref.read(
-        userPerformanceMetricsProvider(dateRange).future,
-      );
-
-      // Llamar a Gemini con tipo MOTIVACIONAL
-      await ref
-          .read(aiCoachingProvider.notifier)
-          .generateAdvice(
-            user: user,
-            metrics: metrics,
-            language: 'es',
-            coachingType: 'motivational',
-          );
-
-      if (!mounted) return;
-
-      // Cerrar loading
-      Navigator.pop(context);
-
-      // Obtener el consejo generado
-      final aiState = ref.read(aiCoachingProvider);
-
-      if (aiState.advice != null) {
-        // Mostrar resultados en diálogo
-        await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: Colors.transparent,
-            contentPadding: EdgeInsets.zero,
-            content: Container(
-              constraints: const BoxConstraints(maxWidth: 400),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.green.shade400, Colors.teal.shade400],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.auto_awesome, color: Colors.white, size: 28),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Consejos Motivacionales',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    constraints: const BoxConstraints(maxHeight: 400),
-                    child: SingleChildScrollView(
-                      child: Text(
-                        aiState.advice!,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.green,
-                        ),
-                        child: const Text('Entendido'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      } else {
-        throw Exception('No se generó ningún consejo');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context); // Cerrar loading
-
-      // Mostrar mensaje motivacional genérico en caso de error
-      await showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.lightbulb_outline, color: Colors.blue),
-              SizedBox(width: 8),
-              Text('Consejo del Día'),
-            ],
-          ),
-          content: const Text(
-            '¡Hoy es un buen día para dar lo mejor de ti! 💫\n\n'
-            'Recuerda: la puntualidad y la constancia son clave para el éxito.',
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Entendido'),
-            ),
-          ],
-        ),
-      );
-    }
   }
 
   Widget _buildBottomNav(ThemeData theme) {

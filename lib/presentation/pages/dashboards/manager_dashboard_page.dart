@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/models/user_model.dart';
 import '../../providers/analytics_provider.dart';
-import '../../providers/ai_coaching_provider.dart';
 
 /// Dashboard for Manager role - Organization-wide KPIs and insights
 class ManagerDashboardPage extends ConsumerStatefulWidget {
@@ -146,28 +145,13 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
           ),
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // Botón para crear usuarios
-          FloatingActionButton(
-            heroTag: 'createUser',
-            onPressed: () {
-              Navigator.pushNamed(context, '/users');
-            },
-            backgroundColor: Colors.green,
-            child: const Icon(Icons.person_add),
-          ),
-          const SizedBox(height: 12),
-          // Botón de predicciones IA
-          FloatingActionButton.extended(
-            heroTag: 'predictions',
-            onPressed: () => _generateAttendancePredictions(),
-            icon: const Icon(Icons.psychology),
-            label: const Text('IA'),
-            backgroundColor: Colors.purple,
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'createUser',
+        onPressed: () {
+          Navigator.pushNamed(context, '/users');
+        },
+        backgroundColor: Colors.green,
+        child: const Icon(Icons.person_add),
       ),
     );
   }
@@ -1218,182 +1202,6 @@ Widget _buildPerformanceDistribution() {
         ),
       ),
     );
-  }
-
-  Future<void> _generateAttendancePredictions() async {
-    // Mostrar loading directamente (sin confirmación doble)
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                const Text('Generando análisis estratégico...'),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.auto_awesome,
-                      size: 16,
-                      color: Colors.orange,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Powered by Google Gemini',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    try {
-      // Obtener KPIs organizacionales
-      final dateRange = DateRange.lastWeek();
-      final kpis = await ref.read(organizationKPIsProvider(dateRange).future);
-
-      // Llamar a Gemini con análisis estratégico para Manager
-      final insights = await ref
-          .read(aiCoachingProvider.notifier)
-          .generateManagerInsights(organizationKPIs: kpis, language: 'es');
-
-      if (!mounted) return;
-
-      // Cerrar loading
-      Navigator.pop(context);
-
-      if (insights != null) {
-        // Mostrar resultados en diálogo ejecutivo
-        await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: Colors.transparent,
-            contentPadding: EdgeInsets.zero,
-            content: Container(
-              constraints: const BoxConstraints(maxWidth: 500),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.deepPurple.shade400, Colors.indigo.shade400],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.business_center,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Análisis Estratégico',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.trending_up, color: Colors.white, size: 14),
-                        SizedBox(width: 4),
-                        Text(
-                          'C-Level Insights',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    constraints: const BoxConstraints(maxHeight: 400),
-                    child: SingleChildScrollView(
-                      child: Text(
-                        insights,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.check_circle),
-                        label: const Text('Entendido'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.deepPurple,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      } else {
-        throw Exception('No se generó ningún análisis');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context); // Cerrar loading
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al generar análisis: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 
   Color _mutedTextColor([double opacity = 0.6]) {
