@@ -200,16 +200,12 @@ class AnalyticsRepositoryImpl implements IAnalyticsRepository {
     int? limit,
   }) async {
     try {
-      // Query SQL para ranking ordenado por punctuality_score
-
+      // Prefer the RPC that aggregates and ranks (may include AI fields).
       final response = await _datasource.client.rpc(
         'get_performance_ranking',
-
         params: {
           'start_date': startDate.toIso8601String(),
-
           'end_date': endDate.toIso8601String(),
-
           'limit_count': limit ?? 10,
         },
       );
@@ -222,26 +218,72 @@ class AnalyticsRepositoryImpl implements IAnalyticsRepository {
           .map(
             (json) => PerformanceMetrics(
               userId: json['user_id'],
-
               attendanceScore: json['attendance_score'] ?? 0,
-
               averageCheckInTime: (json['avg_checkin_time'] ?? 0.0).toDouble(),
-
               totalCheckIns: json['total_checkins'] ?? 0,
-
               lateCheckIns: json['late_checkins'] ?? 0,
-
               periodStart: startDate,
-
               periodEnd: endDate,
-
               aiRecommendations: json['ai_recommendations'],
-
               ranking: json['ranking'],
             ),
           )
           .toList();
     } on PostgrestException catch (e) {
+      // If the RPC fails due to ambiguous column (or other AI-related join issues),
+      // fall back to a fast query on the precomputed `performance_metrics` table
+      // which avoids AI joins and returns the top N by score.
+      final msg = e.message.toString().toLowerCase();
+      if (msg.contains('ai_recommendations') || msg.contains('ambiguous')) {
+        try {
+          final resp = await _datasource.client
+              .from('performance_metrics')
+              .select(
+                'user_id, attendance_score, average_check_in_time, total_check_ins, late_check_ins, ranking',
+              )
+              .gte(
+                'period_start',
+                DateTime(
+                  startDate.year,
+                  startDate.month,
+                  startDate.day,
+                ).toIso8601String(),
+              )
+              .lte(
+                'period_end',
+                DateTime(
+                  endDate.year,
+                  endDate.month,
+                  endDate.day,
+                ).toIso8601String(),
+              )
+              .order('attendance_score', ascending: false)
+              .limit(limit ?? 10);
+
+          if (resp.isEmpty) return [];
+
+          return resp
+              .map(
+                (json) => PerformanceMetrics(
+                  userId: json['user_id'],
+                  attendanceScore: json['attendance_score'] ?? 0,
+                  averageCheckInTime: (json['average_check_in_time'] ?? 0.0)
+                      .toDouble(),
+                  totalCheckIns: json['total_check_ins'] ?? 0,
+                  lateCheckIns: json['late_check_ins'] ?? 0,
+                  periodStart: startDate,
+                  periodEnd: endDate,
+                  aiRecommendations: null,
+                  ranking: json['ranking'],
+                ),
+              )
+              .toList();
+        } catch (_) {
+          // If fallback fails, rethrow original RPC error for visibility
+          throw Exception('Error obteniendo ranking: ${e.message}');
+        }
+      }
+
       throw Exception('Error obteniendo ranking: ${e.message}');
     } catch (e) {
       throw Exception('Error inesperado: $e');

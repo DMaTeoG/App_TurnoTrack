@@ -27,6 +27,9 @@ END $$;
 -- =============================================
 -- PASO 2: CREAR FUNCIÓN get_user_performance
 -- =============================================
+-- Si existe, eliminar para permitir reemplazo (evita conflicto de tipos)
+DROP FUNCTION IF EXISTS public.get_user_performance(UUID, TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE);
+
 CREATE OR REPLACE FUNCTION public.get_user_performance(
   user_id UUID,
   start_date TIMESTAMP WITH TIME ZONE,
@@ -98,6 +101,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- =============================================
 -- PASO 3: CREAR FUNCIÓN get_performance_ranking
 -- =============================================
+-- DROP existing function first to allow changing the returned OUT column names/type
+DROP FUNCTION IF EXISTS public.get_performance_ranking(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, INT);
+
 CREATE OR REPLACE FUNCTION public.get_performance_ranking(
   start_date TIMESTAMP WITH TIME ZONE,
   end_date TIMESTAMP WITH TIME ZONE,
@@ -111,7 +117,7 @@ RETURNS TABLE (
   late_checkins INT,
   punctuality_rate DECIMAL(5,2),
   ranking INT,
-  ai_recommendations JSONB
+  ai_recommendations_json JSONB
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -166,7 +172,7 @@ BEGIN
       checkins,
       late_count,
       punctuality,
-      ai_recommendations,
+      ai_recommendations AS ai_recommendations_json,
       ROW_NUMBER() OVER (ORDER BY score DESC, punctuality DESC, checkins DESC) as rank
     FROM user_metrics
     WHERE score > 0 OR checkins > 0
@@ -179,7 +185,7 @@ BEGIN
     late_count::INT,
     punctuality::DECIMAL(5,2),
     rank::INT,
-    ai_recommendations
+    ai_recommendations_json
   FROM ranked_metrics
   ORDER BY rank ASC
   LIMIT limit_count;

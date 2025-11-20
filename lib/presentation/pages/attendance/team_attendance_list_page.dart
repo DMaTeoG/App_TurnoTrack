@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'dart:math' as math;
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/user_model.dart';
 import '../../providers/attendance_provider.dart';
@@ -820,29 +820,49 @@ class _TeamAttendanceListPageState
           borderRadius: BorderRadius.circular(12),
           child: SizedBox(
             height: 150,
-            child: FlutterMap(
-              options: MapOptions(
-                initialCenter: LatLng(latitude, longitude),
-                initialZoom: 15,
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.turnotrack.app',
-                ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: LatLng(latitude, longitude),
-                      child: const Icon(
-                        Icons.location_pin,
-                        color: Colors.red,
-                        size: 40,
-                      ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // dynamic vertical offset proportional to map height
+                final pixelOffset =
+                    constraints.maxHeight * 0.18; // 18% of map height
+                final latRad = latitude * math.pi / 180.0;
+                const double R = 6378137.0;
+                const double zoom = 15.0;
+                final metersPerPixel =
+                    (math.cos(latRad) * 2.0 * math.pi * R) /
+                    (256.0 * math.pow(2.0, zoom));
+                final degreesOffset = (pixelOffset * metersPerPixel) / 111320.0;
+                final displayCenter = LatLng(
+                  latitude + degreesOffset,
+                  longitude,
+                );
+
+                return FlutterMap(
+                  options: MapOptions(
+                    initialCenter: displayCenter,
+                    initialZoom: zoom,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.turnotrack.app',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: LatLng(latitude, longitude),
+                          child: const Icon(
+                            Icons.location_pin,
+                            color: Colors.red,
+                            size: 40,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                ),
-              ],
+                );
+              },
             ),
           ),
         ),
@@ -886,22 +906,10 @@ class _TeamAttendanceListPageState
                       ),
                     ),
                   ),
-                  // Botón copiar
-                  IconButton(
-                    icon: const Icon(Icons.copy, size: 16),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () {
-                      Clipboard.setData(
-                        ClipboardData(text: '$latitude, $longitude'),
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('📋 Coordenadas copiadas'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    },
+                  // Botón copiar (más grande y con animación)
+                  CopyCoordinatesButton(
+                    coords:
+                        '${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}',
                   ),
                 ],
               ),
@@ -909,24 +917,7 @@ class _TeamAttendanceListPageState
           ),
         ),
         const SizedBox(height: 8),
-        // Botón "Abrir en Google Maps"
-        ElevatedButton.icon(
-          onPressed: () async {
-            final url = Uri.parse(
-              'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude',
-            );
-            if (await canLaunchUrl(url)) {
-              await launchUrl(url, mode: LaunchMode.externalApplication);
-            }
-          },
-          icon: const Icon(Icons.map, size: 18),
-          label: const Text('Abrir en Google Maps'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 44),
-          ),
-        ),
+        // (Botón 'Abrir en Google Maps' eliminado — estaba sin funcionalidad útil)
       ],
     );
   }
@@ -941,6 +932,71 @@ class _TeamAttendanceListPageState
             _selectedUserId = userId;
           });
         },
+      ),
+    );
+  }
+}
+
+/// Botón grande para copiar coordenadas con animación 'goodness'
+class CopyCoordinatesButton extends StatefulWidget {
+  final String coords;
+  const CopyCoordinatesButton({super.key, required this.coords});
+
+  @override
+  State<CopyCoordinatesButton> createState() => _CopyCoordinatesButtonState();
+}
+
+class _CopyCoordinatesButtonState extends State<CopyCoordinatesButton>
+    with SingleTickerProviderStateMixin {
+  bool _copied = false;
+
+  Future<void> _handleCopy() async {
+    final messenger = ScaffoldMessenger.of(context);
+    await Clipboard.setData(ClipboardData(text: widget.coords));
+    setState(() => _copied = true);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('📋 Coordenadas copiadas'),
+        duration: Duration(milliseconds: 1200),
+      ),
+    );
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (mounted) setState(() => _copied = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = _copied ? Colors.green : Colors.grey[200];
+    final fgColor = _copied ? Colors.white : Colors.black87;
+
+    return SizedBox(
+      width: 48,
+      height: 40,
+      child: AnimatedScale(
+        scale: _copied ? 1.06 : 1.0,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutBack,
+        child: ElevatedButton(
+          onPressed: _handleCopy,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: bgColor,
+            foregroundColor: fgColor,
+            padding: const EdgeInsets.all(8),
+            minimumSize: const Size(44, 40),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            elevation: _copied ? 6 : 2,
+          ),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            transitionBuilder: (child, anim) =>
+                ScaleTransition(scale: anim, child: child),
+            child: _copied
+                ? const Icon(Icons.check, key: ValueKey('check'), size: 20)
+                : const Icon(Icons.copy, key: ValueKey('copy'), size: 20),
+          ),
+        ),
       ),
     );
   }

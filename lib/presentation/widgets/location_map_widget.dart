@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'dart:math' as math;
 import '../../data/models/user_model.dart';
 
 /// Widget de mapa con OpenStreetMap
@@ -27,12 +28,44 @@ class LocationMapWidget extends StatefulWidget {
 
 class _LocationMapWidgetState extends State<LocationMapWidget> {
   final MapController _mapController = MapController();
+  final GlobalKey _overlayKey = GlobalKey();
+  double _displayLatOffset = 0.0006; // fallback offset in degrees (~60m)
+  final double _currentZoom = 16.0;
   LocationModel? _selectedLocation;
 
   @override
   void initState() {
     super.initState();
     _checkCurrentLocation();
+  }
+
+  void _computeOffsetForOverlay(double mapHeight) {
+    try {
+      final rb = _overlayKey.currentContext?.findRenderObject() as RenderBox?;
+      final overlayHeight = rb?.size.height ?? 0.0;
+      final pixelOffset = overlayHeight + 12.0;
+
+      // Estimate meters per pixel using Web Mercator at current latitude & zoom
+      final latRad = widget.currentLatitude * math.pi / 180.0;
+      const double R = 6378137.0;
+      final metersPerPixel =
+          (math.cos(latRad) * 2.0 * math.pi * R) /
+          (256.0 * math.pow(2.0, _currentZoom));
+
+      final metersOffset = pixelOffset * metersPerPixel;
+      const double metersPerDegreeLat = 111320.0;
+      final degreesOffset = metersOffset / metersPerDegreeLat;
+
+      if (degreesOffset.isFinite && degreesOffset > 0) {
+        if ((degreesOffset - _displayLatOffset).abs() > 0.00001) {
+          setState(() {
+            _displayLatOffset = degreesOffset;
+          });
+        }
+      }
+    } catch (_) {
+      // ignore measurement errors and keep fallback offset
+    }
   }
 
   /// Verificar si la ubicación actual coincide con alguna permitida
@@ -92,6 +125,10 @@ class _LocationMapWidgetState extends State<LocationMapWidget> {
       widget.currentLatitude,
       widget.currentLongitude,
     );
+    final displayCenter = LatLng(
+      widget.currentLatitude + _displayLatOffset,
+      widget.currentLongitude,
+    );
 
     return Container(
       height: widget.height,
@@ -103,95 +140,107 @@ class _LocationMapWidgetState extends State<LocationMapWidget> {
       child: Stack(
         children: [
           // Mapa OpenStreetMap
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: currentPosition,
-              initialZoom: 16.0,
-              minZoom: 12.0,
-              maxZoom: 18.0,
-            ),
-            children: [
-              // Tiles de OpenStreetMap
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.turnotrack.app',
-                maxZoom: 19,
-              ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _computeOffsetForOverlay(constraints.maxHeight);
+              });
 
-              // Markers de ubicaciones permitidas
-              MarkerLayer(
-                markers: [
-                  // Markers de ubicaciones permitidas (AZUL)
-                  ...widget.allowedLocations.map((location) {
-                    return Marker(
-                      point: LatLng(location.latitude, location.longitude),
-                      width: 40,
-                      height: 40,
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedLocation = location;
-                          });
-                          widget.onLocationSelected?.call(location);
-                        },
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              color: Colors.blue,
-                              size: 40,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withValues(alpha: 0.3),
-                                  blurRadius: 4,
+              return FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: displayCenter,
+                  initialZoom: _currentZoom,
+                  minZoom: 12.0,
+                  maxZoom: 18.0,
+                ),
+                children: [
+                  // Tiles de OpenStreetMap
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.turnotrack.app',
+                    maxZoom: 19,
+                  ),
+
+                  // Markers de ubicaciones permitidas
+                  MarkerLayer(
+                    markers: [
+                      // Markers de ubicaciones permitidas (AZUL)
+                      ...widget.allowedLocations.map((location) {
+                        return Marker(
+                          point: LatLng(location.latitude, location.longitude),
+                          width: 40,
+                          height: 40,
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedLocation = location;
+                              });
+                              widget.onLocationSelected?.call(location);
+                            },
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.location_on,
+                                  color: Colors.blue,
+                                  size: 40,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
                                 ),
                               ],
+                            ),
+                          ),
+                        );
+                      }),
+
+                      // Marker de posición actual (VERDE si coincide, ROJO si no)
+                      Marker(
+                        point: currentPosition,
+                        width: 56,
+                        height: 56,
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: _selectedLocation != null
+                                    ? Colors.green
+                                    : Colors.red,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.my_location,
+                                color: Colors.white,
+                                size: 28,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                    );
-                  }),
-
-                  // Marker de posición actual (VERDE si coincide, ROJO si no)
-                  Marker(
-                    point: currentPosition,
-                    width: 50,
-                    height: 50,
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: _selectedLocation != null
-                                ? Colors.green
-                                : Colors.red,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                blurRadius: 8,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.my_location,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
 
           // Info de ubicación actual (overlay)
           Positioned(
+            key: _overlayKey,
             top: 16,
             left: 16,
             right: 16,
@@ -255,7 +304,14 @@ class _LocationMapWidgetState extends State<LocationMapWidget> {
               heroTag: 'center_map',
               backgroundColor: theme.primaryColor,
               onPressed: () {
-                _mapController.move(currentPosition, 16.0);
+                // Move to the display center so the marker stays visible
+                _mapController.move(
+                  LatLng(
+                    widget.currentLatitude + _displayLatOffset,
+                    widget.currentLongitude,
+                  ),
+                  _currentZoom,
+                );
               },
               child: const Icon(Icons.my_location, color: Colors.white),
             ),

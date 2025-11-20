@@ -115,22 +115,22 @@ class MyApp extends ConsumerWidget {
 
           home: Builder(
             builder: (navigatorContext) {
-              print('✅ SplashScreen mostrado');
+              debugPrint('✅ SplashScreen mostrado');
               return SplashScreen(
                 onAnimationComplete: () async {
-                  print('🚀 Animación terminada');
+                  debugPrint('🚀 Animación terminada');
                   final user = await ref.read(authNotifierProvider.future);
-                  print('👤 Usuario leído: $user');
+                  debugPrint('👤 Usuario leído: $user');
 
                   if (!navigatorContext.mounted) return;
 
                   if (user == null) {
-                    print('🔑 No hay sesión activa. Mostrando login.');
+                    debugPrint('🔑 No hay sesión activa. Mostrando login.');
                     Navigator.of(
                       navigatorContext,
                     ).pushReplacementNamed('/login');
                   } else {
-                    print('🧭 Usuario autenticado. Rol: ${user.role}');
+                    debugPrint('🧭 Usuario autenticado. Rol: ${user.role}');
                     Navigator.of(navigatorContext).pushReplacementNamed(
                       switch (user.role.toLowerCase()) {
                         'manager' => '/manager',
@@ -258,39 +258,5 @@ class MyApp extends ConsumerWidget {
     ); // themeModeAsync.when
   }
 
-  Future<void> _navigateAfterSplash(
-    BuildContext navigatorContext,
-    WidgetRef ref,
-  ) async {
-    try {
-      final user = await ref.read(authNotifierProvider.future);
-
-      if (!navigatorContext.mounted) return;
-
-      if (user == null) {
-        Navigator.of(navigatorContext).pushReplacementNamed('/login');
-        return;
-      }
-
-      final role = user.role.toLowerCase();
-      String routeName;
-
-      switch (role) {
-        case 'manager':
-          routeName = '/manager';
-          break;
-        case 'supervisor':
-          routeName = '/supervisor';
-          break;
-        case 'worker':
-        default:
-          routeName = '/home';
-      }
-
-      Navigator.of(navigatorContext).pushReplacementNamed(routeName);
-    } catch (error) {
-      if (!navigatorContext.mounted) return;
-      Navigator.of(navigatorContext).pushReplacementNamed('/login');
-    }
-  }
+  // Removed unused helper _navigateAfterSplash; navigation handled inline in Builder above.
 }

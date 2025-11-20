@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'dart:math' as math;
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/user_model.dart';
 import '../../providers/attendance_provider.dart';
@@ -217,38 +217,54 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
                 height: 200,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: FlutterMap(
-                    options: MapOptions(
-                      initialCenter: LatLng(
-                        attendance.checkOutLatitude!,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final pixelOffset = constraints.maxHeight * 0.18;
+                      final latRad =
+                          attendance.checkOutLatitude! * math.pi / 180.0;
+                      const double R = 6378137.0;
+                      const double zoom = 15.0;
+                      final metersPerPixel =
+                          (math.cos(latRad) * 2.0 * math.pi * R) /
+                          (256.0 * math.pow(2.0, zoom));
+                      final degreesOffset =
+                          (pixelOffset * metersPerPixel) / 111320.0;
+                      final displayCenter = LatLng(
+                        attendance.checkOutLatitude! + degreesOffset,
                         attendance.checkOutLongitude!,
-                      ),
-                      initialZoom: 15,
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.turnotrack.app',
-                      ),
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: LatLng(
-                              attendance.checkOutLatitude!,
-                              attendance.checkOutLongitude!,
-                            ),
-                            width: 40,
-                            height: 40,
-                            child: const Icon(
-                              Icons.location_on,
-                              color: Colors.orange,
-                              size: 40,
-                            ),
+                      );
+
+                      return FlutterMap(
+                        options: MapOptions(
+                          initialCenter: displayCenter,
+                          initialZoom: zoom,
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName: 'com.turnotrack.app',
+                          ),
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: LatLng(
+                                  attendance.checkOutLatitude!,
+                                  attendance.checkOutLongitude!,
+                                ),
+                                width: 40,
+                                height: 40,
+                                child: const Icon(
+                                  Icons.location_on,
+                                  color: Colors.orange,
+                                  size: 40,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
               ),
@@ -700,28 +716,50 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
             child: SizedBox(
               height: 200,
-              child: FlutterMap(
-                options: MapOptions(
-                  initialCenter: LatLng(latitude, longitude),
-                  initialZoom: 15,
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.turnotrack.app',
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: LatLng(latitude, longitude),
-                        width: 40,
-                        height: 40,
-                        child: Icon(Icons.location_on, color: color, size: 40),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final pixelOffset = constraints.maxHeight * 0.18;
+                  final latRad = latitude * math.pi / 180.0;
+                  const double R = 6378137.0;
+                  const double zoom = 15.0;
+                  final metersPerPixel =
+                      (math.cos(latRad) * 2.0 * math.pi * R) /
+                      (256.0 * math.pow(2.0, zoom));
+                  final degreesOffset =
+                      (pixelOffset * metersPerPixel) / 111320.0;
+                  final displayCenter = LatLng(
+                    latitude + degreesOffset,
+                    longitude,
+                  );
+
+                  return FlutterMap(
+                    options: MapOptions(
+                      initialCenter: displayCenter,
+                      initialZoom: zoom,
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.turnotrack.app',
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: LatLng(latitude, longitude),
+                            width: 40,
+                            height: 40,
+                            child: Icon(
+                              Icons.location_on,
+                              color: color,
+                              size: 40,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                ],
+                  );
+                },
               ),
             ),
           ),
@@ -750,22 +788,10 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
                         ),
                       ),
                     ),
-                    // Botón para copiar coordenadas
-                    IconButton(
-                      icon: const Icon(Icons.copy, size: 16),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () {
-                        Clipboard.setData(
-                          ClipboardData(text: '$latitude, $longitude'),
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Coordenadas copiadas'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      },
+                    // Botón para copiar coordenadas (más grande y animado)
+                    CopyCoordinatesButton(
+                      coords:
+                          '${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}',
                     ),
                   ],
                 ),
@@ -789,30 +815,76 @@ class _AttendanceHistoryPageState extends ConsumerState<AttendanceHistoryPage> {
                     ],
                   ),
                 ],
-                // Botón para abrir en Google Maps
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: () async {
-                    final url =
-                        'https://www.google.com/maps?q=$latitude,$longitude';
-                    if (await canLaunchUrl(Uri.parse(url))) {
-                      await launchUrl(
-                        Uri.parse(url),
-                        mode: LaunchMode.externalApplication,
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.open_in_new, size: 16),
-                  label: const Text('Abrir en Google Maps'),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                ),
+                // (Botón 'Abrir en Google Maps' eliminado)
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Copiar coordenadas: botón grande y con animación.
+class CopyCoordinatesButton extends StatefulWidget {
+  final String coords;
+  const CopyCoordinatesButton({super.key, required this.coords});
+
+  @override
+  State<CopyCoordinatesButton> createState() => _CopyCoordinatesButtonState();
+}
+
+class _CopyCoordinatesButtonState extends State<CopyCoordinatesButton>
+    with SingleTickerProviderStateMixin {
+  bool _copied = false;
+
+  Future<void> _handleCopy() async {
+    final messenger = ScaffoldMessenger.of(context);
+    await Clipboard.setData(ClipboardData(text: widget.coords));
+    setState(() => _copied = true);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('📋 Coordenadas copiadas'),
+        duration: Duration(milliseconds: 1200),
+      ),
+    );
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (mounted) setState(() => _copied = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = _copied ? Colors.green : Colors.grey[200];
+    final fgColor = _copied ? Colors.white : Colors.black87;
+
+    return SizedBox(
+      width: 48,
+      height: 40,
+      child: AnimatedScale(
+        scale: _copied ? 1.06 : 1.0,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutBack,
+        child: ElevatedButton(
+          onPressed: _handleCopy,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: bgColor,
+            foregroundColor: fgColor,
+            padding: const EdgeInsets.all(8),
+            minimumSize: const Size(44, 40),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            elevation: _copied ? 6 : 2,
+          ),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            transitionBuilder: (child, anim) =>
+                ScaleTransition(scale: anim, child: child),
+            child: _copied
+                ? const Icon(Icons.check, key: ValueKey('check'), size: 20)
+                : const Icon(Icons.copy, key: ValueKey('copy'), size: 20),
+          ),
+        ),
       ),
     );
   }

@@ -49,6 +49,7 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
   bool _isPasswordValid = false;
   bool _isDocumentValid = false;
   bool _isPhoneValid = true; // Opcional
+  String? _nameErrorText;
 
   @override
   void initState() {
@@ -123,8 +124,10 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
   }
 
   void _validateName() {
+    final result = Validators.name(_nameController.text.trim());
     setState(() {
-      _isNameValid = _nameController.text.trim().length >= 3;
+      _isNameValid = result == null;
+      _nameErrorText = result;
     });
   }
 
@@ -282,9 +285,7 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
               LengthLimitingTextInputFormatter(60),
             ],
             isValid: _isNameValid,
-            errorText: _nameController.text.isNotEmpty && !_isNameValid
-                ? 'Mínimo 3 caracteres'
-                : null,
+            errorText: _nameErrorText,
           ),
 
           const SizedBox(height: AppTheme.spacingM),
@@ -483,8 +484,7 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
                   required int currentLength,
                   required bool isFocused,
                   int? maxLength,
-                }) =>
-                  null
+                }) => null
               : null,
           style: theme.textTheme.bodyMedium,
           decoration: InputDecoration(
@@ -648,10 +648,7 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Rol del Usuario',
-          style: _sectionLabelStyle(),
-        ),
+        Text('Rol del Usuario', style: _sectionLabelStyle()),
         const SizedBox(height: AppTheme.spacingXS),
         Container(
           decoration: BoxDecoration(
@@ -702,10 +699,7 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Supervisor (Opcional)',
-          style: _sectionLabelStyle(),
-        ),
+        Text('Supervisor (Opcional)', style: _sectionLabelStyle()),
         const SizedBox(height: AppTheme.spacingXS),
         Container(
           decoration: BoxDecoration(
@@ -826,15 +820,14 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
 
   TextStyle _sectionLabelStyle() {
     final theme = Theme.of(context);
-    return theme.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w600,
-        ) ??
+    return theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600) ??
         const TextStyle(fontWeight: FontWeight.w600, fontSize: 14);
   }
 
   Color _mutedTextColor([double opacity = 0.6]) {
     final theme = Theme.of(context);
-    final base = theme.textTheme.bodyMedium?.color ??
+    final base =
+        theme.textTheme.bodyMedium?.color ??
         (theme.brightness == Brightness.dark ? Colors.white : Colors.black87);
     return base.withValues(alpha: opacity);
   }
@@ -864,7 +857,11 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         child: Row(
           children: [
-            Icon(icon, color: enabled ? iconColor : _mutedTextColor(0.5), size: 20),
+            Icon(
+              icon,
+              color: enabled ? iconColor : _mutedTextColor(0.5),
+              size: 20,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -920,7 +917,6 @@ class _UserFormWidgetState extends ConsumerState<UserFormWidget> {
         return 'Trabajador';
     }
   }
-
 }
 
 class _RoleSelectedTile extends StatelessWidget {
@@ -944,9 +940,9 @@ class _RoleSelectedTile extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             title,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),

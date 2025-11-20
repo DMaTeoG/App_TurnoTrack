@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/attendance_provider.dart';
 import '../providers/sales_provider.dart';
-import '../providers/ai_coaching_provider.dart';
 import '../providers/analytics_provider.dart'; // Contiene DateRange y userPerformanceMetricsProvider
 import '../../data/models/user_model.dart'; // Para AttendanceModel
 import '../../core/widgets/animated_widgets.dart';
@@ -736,10 +735,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         padding: const EdgeInsets.all(16).add(
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         ),
-        child: AIAdviceMessage(
-          title: 'Consejo motivacional',
-          message: advice,
-        ),
+        child: AIAdviceMessage(title: 'Consejo motivacional', message: advice),
       ),
     );
   }

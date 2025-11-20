@@ -63,4 +63,45 @@ class Validators {
     }
     return null;
   }
+
+  /// Validar nombre completo / nombre de usuario (resistente a entradas raras)
+  /// Reglas aplicadas:
+  /// - No vacío, mínimo 3 caracteres
+  /// - Debe contener al menos una letra
+  /// - No puede contener el carácter '@' ni urls
+  /// - No permitir secuencias largas de dígitos (p. ej. '123456789')
+  /// - No permitir nombre compuesto mayormente por dígitos (>50%)
+  /// - Evita caracteres repetidos excesivos
+  static String? name(String? value) {
+    if (value == null) return 'El nombre es requerido';
+    final v = value.trim();
+    if (v.isEmpty) return 'El nombre es requerido';
+    if (v.length < 3) return 'El nombre debe tener al menos 3 caracteres';
+
+    // No permitir '@' o url
+    if (v.contains('@') || v.contains('http://') || v.contains('https://')) {
+      return 'Nombre inválido';
+    }
+
+    // Contener al menos una letra
+    final letterReg = RegExp(r"[A-Za-zÁÉÍÓÚáéíóúÑñÜü]");
+    if (!letterReg.hasMatch(v)) return 'El nombre debe contener letras';
+
+    // No permitir secuencias largas de dígitos (6 o más)
+    final longDigits = RegExp(r"\d{6,}");
+    if (longDigits.hasMatch(v)) return 'Nombre inválido';
+
+    // Evitar que el nombre sea mayoritariamente números
+    final digits = RegExp(r"\d");
+    final digitCount = digits.allMatches(v).length;
+    if (digitCount / v.replaceAll(' ', '').length > 0.5) {
+      return 'Nombre inválido';
+    }
+
+    // Evitar caracteres repetidos excesivos (4 o más repetidos)
+    final repeated = RegExp(r"(.)\1{4,}");
+    if (repeated.hasMatch(v)) return 'Nombre inválido';
+
+    return null;
+  }
 }
