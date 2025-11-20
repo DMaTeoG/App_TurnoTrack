@@ -388,258 +388,290 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
   }
 
   Widget _buildAttendanceTrendChart() {
-  final dateRange = _getDateRangeForPeriod();
-  final trendAsync = ref.watch(attendanceTrendProvider(dateRange));
+    final dateRange = _getDateRangeForPeriod();
+    final trendAsync = ref.watch(attendanceTrendProvider(dateRange));
 
-  return Card(
-    elevation: 2,
-    child: Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Tendencia de Asistencia',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Tendencia de Asistencia',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              trendAsync.when(
-                data: (trends) {
-                  if (trends.isEmpty) return const SizedBox.shrink();
-                  final lastTwo = trends.length >= 2
-                      ? trends.sublist(trends.length - 2)
-                      : trends;
-                  final isPositive =
-                      lastTwo.length == 2 &&
-                      lastTwo.last.punctualityRate >
-                          lastTwo.first.punctualityRate;
+                const SizedBox(width: 8),
+                trendAsync.when(
+                  data: (trends) {
+                    if (trends.isEmpty) return const SizedBox.shrink();
+                    final lastTwo = trends.length >= 2
+                        ? trends.sublist(trends.length - 2)
+                        : trends;
+                    final isPositive =
+                        lastTwo.length == 2 &&
+                        lastTwo.last.punctualityRate >
+                            lastTwo.first.punctualityRate;
 
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: (isPositive ? Colors.green : Colors.orange)
-                          .withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      isPositive
-                          ? '↑ Tendencia positiva'
-                          : '↓ Tendencia negativa',
-                      style: TextStyle(
-                        color: isPositive ? Colors.green : Colors.orange,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 200,
-            child: trendAsync.when(
-              data: (trends) {
-                if (trends.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.inbox_outlined,
-                          size: 48,
-                          color: _mutedTextColor(0.4),
+                      decoration: BoxDecoration(
+                        color: (isPositive ? Colors.green : Colors.orange)
+                            .withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        isPositive
+                            ? '↑ Tendencia positiva'
+                            : '↓ Tendencia negativa',
+                        style: TextStyle(
+                          color: isPositive ? Colors.green : Colors.orange,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No hay datos de tendencia disponibles',
-                          style: TextStyle(
-                            color: _mutedTextColor(),
-                            fontSize: 14,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  },
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 200,
+              child: trendAsync.when(
+                data: (trends) {
+                  if (trends.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.inbox_outlined,
+                            size: 48,
+                            color: _mutedTextColor(0.4),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No hay datos de tendencia disponibles',
+                            style: TextStyle(
+                              color: _mutedTextColor(),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final months = [
+                    'Ene',
+                    'Feb',
+                    'Mar',
+                    'Abr',
+                    'May',
+                    'Jun',
+                    'Jul',
+                    'Ago',
+                    'Sep',
+                    'Oct',
+                    'Nov',
+                    'Dic',
+                  ];
+
+                  return LineChart(
+                    LineChartData(
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: 20,
+                        getDrawingHorizontalLine: (value) {
+                          return FlLine(
+                            color: _surfaceStrokeColor(),
+                            strokeWidth: 1,
+                          );
+                        },
+                      ),
+                      titlesData: FlTitlesData(
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (value, meta) {
+                              if (value.toInt() < 0 ||
+                                  value.toInt() >= trends.length) {
+                                return const Text('');
+                              }
+
+                              final item = trends[value.toInt()];
+                              // Determine label based on granularity
+                              final start = DateTime(
+                                dateRange.startDate.year,
+                                dateRange.startDate.month,
+                                dateRange.startDate.day,
+                              );
+                              final end = DateTime(
+                                dateRange.endDate.year,
+                                dateRange.endDate.month,
+                                dateRange.endDate.day,
+                              );
+                              final diffDays =
+                                  end.difference(start).inDays.abs() + 1;
+
+                              if (diffDays <= 31) {
+                                // Daily label: day number
+                                return Text(
+                                  '${item.month.day}',
+                                  style: const TextStyle(fontSize: 10),
+                                );
+                              } else if (diffDays <= 120) {
+                                // Weekly label: week start day/month
+                                return Text(
+                                  '${item.month.day}/${item.month.month}',
+                                  style: const TextStyle(fontSize: 10),
+                                );
+                              } else {
+                                // Monthly label
+                                final months = [
+                                  'Ene',
+                                  'Feb',
+                                  'Mar',
+                                  'Abr',
+                                  'May',
+                                  'Jun',
+                                  'Jul',
+                                  'Ago',
+                                  'Sep',
+                                  'Oct',
+                                  'Nov',
+                                  'Dic',
+                                ];
+                                return Text(
+                                  months[item.month.month - 1],
+                                  style: const TextStyle(fontSize: 10),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            getTitlesWidget: (value, meta) {
+                              return Text(
+                                '${value.toInt()}%',
+                                style: const TextStyle(fontSize: 10),
+                              );
+                            },
+                          ),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      lineBarsData: [
+                        // Asistencia
+                        LineChartBarData(
+                          spots: trends
+                              .asMap()
+                              .entries
+                              .map(
+                                (e) => FlSpot(
+                                  e.key.toDouble(),
+                                  e.value.attendanceRate,
+                                ),
+                              )
+                              .toList(),
+                          isCurved: true,
+                          color: Colors.blue,
+                          barWidth: 3,
+                          dotData: const FlDotData(show: true),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: Colors.blue.withValues(alpha: 0.1),
+                          ),
+                        ),
+                        // Puntualidad
+                        LineChartBarData(
+                          spots: trends
+                              .asMap()
+                              .entries
+                              .map(
+                                (e) => FlSpot(
+                                  e.key.toDouble(),
+                                  e.value.punctualityRate,
+                                ),
+                              )
+                              .toList(),
+                          isCurved: true,
+                          color: Colors.green,
+                          barWidth: 3,
+                          dotData: const FlDotData(show: true),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: Colors.green.withValues(alpha: 0.1),
                           ),
                         ),
                       ],
+                      minY: 0,
+                      maxY: 100,
                     ),
                   );
-                }
-
-                final months = [
-                  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-                  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
-                ];
-
-                return LineChart(
-                  LineChartData(
-                    gridData: FlGridData(
-                      show: true,
-                      drawVerticalLine: false,
-                      horizontalInterval: 20,
-                      getDrawingHorizontalLine: (value) {
-                        return FlLine(
-                          color: _surfaceStrokeColor(),
-                          strokeWidth: 1,
-                        );
-                      },
-                    ),
-                    titlesData: FlTitlesData(
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (value, meta) {
-                            if (value.toInt() < 0 || value.toInt() >= trends.length) {
-                              return const Text('');
-                            }
-
-                            final item = trends[value.toInt()];
-                            // Determine label based on granularity
-                            final start = DateTime(dateRange.startDate.year, dateRange.startDate.month, dateRange.startDate.day);
-                            final end = DateTime(dateRange.endDate.year, dateRange.endDate.month, dateRange.endDate.day);
-                            final diffDays = end.difference(start).inDays.abs() + 1;
-
-                            if (diffDays <= 31) {
-                              // Daily label: day number
-                              return Text(
-                                '${item.month.day}',
-                                style: const TextStyle(fontSize: 10),
-                              );
-                            } else if (diffDays <= 120) {
-                              // Weekly label: week start day/month
-                              return Text(
-                                '${item.month.day}/${item.month.month}',
-                                style: const TextStyle(fontSize: 10),
-                              );
-                            } else {
-                              // Monthly label
-                              final months = [
-                                'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-                                'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
-                              ];
-                              return Text(
-                                months[item.month.month - 1],
-                                style: const TextStyle(fontSize: 10),
-                              );
-                            }
-                          },
-                        ),
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red[300],
                       ),
-                      leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 40,
-                          getTitlesWidget: (value, meta) {
-                            return Text(
-                              '${value.toInt()}%',
-                              style: const TextStyle(fontSize: 10),
-                            );
-                          },
-                        ),
-                      ),
-                      topTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      rightTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                    ),
-                    borderData: FlBorderData(show: false),
-                    lineBarsData: [
-                      // Asistencia
-                      LineChartBarData(
-                        spots: trends
-                            .asMap()
-                            .entries
-                            .map((e) => FlSpot(
-                                  e.key.toDouble(),
-                                  e.value.attendanceRate,
-                                ))
-                            .toList(),
-                        isCurved: true,
-                        color: Colors.blue,
-                        barWidth: 3,
-                        dotData: const FlDotData(show: true),
-                        belowBarData: BarAreaData(
-                          show: true,
-                          color: Colors.blue.withValues(alpha: 0.1),
-                        ),
-                      ),
-                      // Puntualidad
-                      LineChartBarData(
-                        spots: trends
-                            .asMap()
-                            .entries
-                            .map((e) => FlSpot(
-                                  e.key.toDouble(),
-                                  e.value.punctualityRate,
-                                ))
-                            .toList(),
-                        isCurved: true,
-                        color: Colors.green,
-                        barWidth: 3,
-                        dotData: const FlDotData(show: true),
-                        belowBarData: BarAreaData(
-                          show: true,
-                          color: Colors.green.withValues(alpha: 0.1),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Error al cargar tendencia',
+                        style: TextStyle(
+                          color: _mutedTextColor(),
+                          fontSize: 14,
                         ),
                       ),
                     ],
-                    minY: 0,
-                    maxY: 100,
                   ),
-                );
-              },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red[300],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Error al cargar tendencia',
-                      style: TextStyle(
-                        color: _mutedTextColor(),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildLegendItem('Asistencia', Colors.blue),
-              const SizedBox(width: 20),
-              _buildLegendItem('Puntualidad', Colors.green),
-            ],
-          ),
-        ],
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildLegendItem('Asistencia', Colors.blue),
+                const SizedBox(width: 20),
+                _buildLegendItem('Puntualidad', Colors.green),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 
   Widget _buildLegendItem(String label, Color color) {
     return Row(
@@ -655,152 +687,154 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     );
   }
 
+  Widget _buildPerformanceDistribution() {
+    final distributionAsync = ref.watch(performanceDistributionProvider);
 
-Widget _buildPerformanceDistribution() {
-  final distributionAsync = ref.watch(performanceDistributionProvider);
-
-  return Card(
-    elevation: 2,
-    child: Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Distribución de Desempeño',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 200,
-            child: distributionAsync.when(
-              data: (distribution) {
-                if (distribution.total == 0) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.pie_chart_outline,
-                          size: 48,
-                          color: _mutedTextColor(0.4),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No hay datos de desempeño disponibles',
-                          style: TextStyle(
-                            color: _mutedTextColor(),
-                            fontSize: 14,
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Distribución de Desempeño',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 200,
+              child: distributionAsync.when(
+                data: (distribution) {
+                  if (distribution.total == 0) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.pie_chart_outline,
+                            size: 48,
+                            color: _mutedTextColor(0.4),
                           ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No hay datos de desempeño disponibles',
+                            style: TextStyle(
+                              color: _mutedTextColor(),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 180,
+                          child: PieChart(
+                            PieChartData(
+                              sectionsSpace: 2,
+                              centerSpaceRadius: 50,
+                              sections: [
+                                PieChartSectionData(
+                                  value: distribution.excellent.toDouble(),
+                                  title: '${distribution.excellent}',
+                                  color: Colors.green,
+                                  radius: 60,
+                                  titleStyle: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                PieChartSectionData(
+                                  value: distribution.good.toDouble(),
+                                  title: '${distribution.good}',
+                                  color: Colors.amber,
+                                  radius: 55,
+                                  titleStyle: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                PieChartSectionData(
+                                  value: distribution.needsImprovement
+                                      .toDouble(),
+                                  title: '${distribution.needsImprovement}',
+                                  color: Colors.orange,
+                                  radius: 50,
+                                  titleStyle: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildPerformanceLabel(
+                              'Excelente (90-100)',
+                              Colors.green,
+                              distribution.excellent,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildPerformanceLabel(
+                              'Bueno (70-89)',
+                              Colors.amber,
+                              distribution.good,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildPerformanceLabel(
+                              'Mejorar (<70)',
+                              Colors.orange,
+                              distribution.needsImprovement,
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   );
-                }
-
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      SizedBox(
-                        width: 180,
-                        child: PieChart(
-                          PieChartData(
-                            sectionsSpace: 2,
-                            centerSpaceRadius: 50,
-                            sections: [
-                              PieChartSectionData(
-                                value: distribution.excellent.toDouble(),
-                                title: '${distribution.excellent}',
-                                color: Colors.green,
-                                radius: 60,
-                                titleStyle: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              PieChartSectionData(
-                                value: distribution.good.toDouble(),
-                                title: '${distribution.good}',
-                                color: Colors.amber,
-                                radius: 55,
-                                titleStyle: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              PieChartSectionData(
-                                value: distribution.needsImprovement.toDouble(),
-                                title: '${distribution.needsImprovement}',
-                                color: Colors.orange,
-                                radius: 50,
-                                titleStyle: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red[300],
                       ),
-                      const SizedBox(width: 20),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildPerformanceLabel(
-                            'Excelente (90-100)',
-                            Colors.green,
-                            distribution.excellent,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildPerformanceLabel(
-                            'Bueno (70-89)',
-                            Colors.amber,
-                            distribution.good,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildPerformanceLabel(
-                            'Mejorar (<70)',
-                            Colors.orange,
-                            distribution.needsImprovement,
-                          ),
-                        ],
+                      const SizedBox(height: 12),
+                      Text(
+                        'Error al cargar distribución',
+                        style: TextStyle(
+                          color: _mutedTextColor(),
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Error al cargar distribución',
-                      style: TextStyle(
-                        color: _mutedTextColor(),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-  
-  
   Widget _buildPerformanceLabel(String label, Color color, int value) {
     return Row(
       children: [
