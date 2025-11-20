@@ -13,6 +13,8 @@ import '../pages/dashboards/worker_dashboard_page.dart';
 import '../pages/sales/sales_page.dart';
 import '../../core/constants/ai_fallback_advice.dart';
 import '../widgets/ai_advice_message.dart';
+import '../providers/ai_coaching_provider.dart';
+import '../widgets/ai_advice_modal.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -722,8 +724,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ).showSnackBar(const SnackBar(content: Text('Usuario no encontrado')));
       return;
     }
+    // Prepare date range (current month) and fetch metrics to provide context to Gemini
+    final now = DateTime.now();
+    final dateRange = DateRange(
+      startDate: DateTime(now.year, now.month, 1),
+      endDate: now,
+    );
 
-    final advice = AIFallbackAdvice.getRandomAdvice(user.role);
+    PerformanceMetrics metrics;
+    try {
+      metrics = await ref.read(userPerformanceMetricsProvider(dateRange).future);
+    } catch (_) {
+      // If metrics fail, create a minimal placeholder so the service still runs
+      metrics = PerformanceMetrics(
+        userId: user.id,
+        attendanceScore: 0,
+        averageCheckInTime: 0.0,
+        totalCheckIns: 0,
+        lateCheckIns: 0,
+        periodStart: dateRange.startDate,
+        periodEnd: dateRange.endDate,
+      );
+    }
+
+    // Trigger generation in provider (it will fallback if Gemini not configured)
+    final notifier = ref.read(aiCoachingProvider.notifier);
+    await notifier.generateAdvice(user: user, metrics: metrics, language: 'es', coachingType: 'motivational');
 
     if (!mounted) return;
 
@@ -735,7 +761,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         padding: const EdgeInsets.all(16).add(
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         ),
-        child: AIAdviceMessage(title: 'Consejo motivacional', message: advice),
+        child: AIAdviceModal(title: 'Consejo IA'),
       ),
     );
   }

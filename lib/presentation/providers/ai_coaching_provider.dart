@@ -56,14 +56,42 @@ class AICoachingNotifier extends Notifier<AICoachingState> {
   }) async {
     state = state.copyWith(isLoading: true, error: null);
 
-    final fallback = AIFallbackAdvice.getRandomAdvice(user.role);
+    // If Gemini is not configured, immediately return a sensible fallback
+    try {
+      if (!_service.isConfigured) {
+        final fallback = AIFallbackAdvice.getRandomAdvice(user.role);
+        state = state.copyWith(
+          isLoading: false,
+          advice: fallback,
+          error: 'AI no configurada',
+          lastUpdated: DateTime.now(),
+        );
+        return;
+      }
 
-    state = state.copyWith(
-      isLoading: false,
-      advice: fallback,
-      error: null,
-      lastUpdated: DateTime.now(),
-    );
+      final advice = await _service.generateCoachingAdvice(
+        user: user,
+        metrics: metrics,
+        language: language,
+        coachingType: coachingType,
+      );
+
+      state = state.copyWith(
+        isLoading: false,
+        advice: advice,
+        error: null,
+        lastUpdated: DateTime.now(),
+      );
+    } catch (e) {
+      // On error, fall back to localized advice
+      final fallback = AIFallbackAdvice.getRandomAdvice(user.role);
+      state = state.copyWith(
+        isLoading: false,
+        advice: fallback,
+        error: 'Error generando consejo: ${e.toString()}',
+        lastUpdated: DateTime.now(),
+      );
+    }
   }
 
   /// Generate team summary for supervisors
