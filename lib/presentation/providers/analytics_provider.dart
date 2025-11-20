@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import '../../core/utils/app_logger.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/analytics_repository_impl.dart';
@@ -91,10 +92,10 @@ final organizationKPIsProvider = FutureProvider.autoDispose
 // Provider de ranking
 final performanceRankingProvider = FutureProvider.autoDispose
     .family<List<PerformanceMetrics>, RankingParams>((ref, params) async {
-      print('🏆 [RANKING] Solicitando ranking...');
-      print('🏆 [RANKING] Fecha inicio: ${params.dateRange.startDate}');
-      print('🏆 [RANKING] Fecha fin: ${params.dateRange.endDate}');
-      print('🏆 [RANKING] Límite: ${params.limit}');
+      debugPrint('🏆 [RANKING] Solicitando ranking...');
+      debugPrint('🏆 [RANKING] Fecha inicio: ${params.dateRange.startDate}');
+      debugPrint('🏆 [RANKING] Fecha fin: ${params.dateRange.endDate}');
+      debugPrint('🏆 [RANKING] Límite: ${params.limit}');
 
       try {
         final repository = ref.read(analyticsRepositoryProvider);
@@ -104,11 +105,11 @@ final performanceRankingProvider = FutureProvider.autoDispose
           limit: params.limit,
         );
 
-        print('🏆 [RANKING] ✅ Datos recibidos: ${result.length} usuarios');
+        debugPrint('🏆 [RANKING] ✅ Datos recibidos: ${result.length} usuarios');
         return result;
       } catch (e, stack) {
-        print('🏆 [RANKING] ❌ ERROR: $e');
-        print('🏆 [RANKING] Stack: $stack');
+        debugPrint('🏆 [RANKING] ❌ ERROR: $e');
+        debugPrint('🏆 [RANKING] Stack: $stack');
         rethrow;
       }
     });
@@ -196,45 +197,97 @@ class RankingParams {
 // ============================================
 
 /// Provider de tendencia de asistencia (últimos 6 meses)
-final attendanceTrendProvider =
-    FutureProvider.autoDispose<List<MonthlyAttendance>>((ref) async {
-      final user = ref.watch(authNotifierProvider).value;
-      if (user == null || user.role != 'manager') {
-        return [];
+final attendanceTrendProvider = FutureProvider.autoDispose
+    .family<List<MonthlyAttendance>, DateRange>((ref, dateRange) async {
+  final user = ref.watch(authNotifierProvider).value;
+  if (user == null || user.role != 'manager') {
+    return [];
+  }
+
+  final repository = ref.read(analyticsRepositoryProvider);
+  final start = DateTime(dateRange.startDate.year, dateRange.startDate.month, dateRange.startDate.day);
+  final end = DateTime(dateRange.endDate.year, dateRange.endDate.month, dateRange.endDate.day);
+  final diffDays = end.difference(start).inDays.abs() + 1;
+
+  final List<MonthlyAttendance> result = [];
+
+  // Decide granularity: daily for ranges up to 31 days, weekly for <= 120 days, monthly otherwise
+  if (diffDays <= 31) {
+    // Daily buckets
+    for (int i = 0; i < diffDays; i++) {
+      final dayStart = start.add(Duration(days: i));
+      final dayEnd = dayStart.add(const Duration(days: 1)).subtract(const Duration(seconds: 1));
+
+      final kpis = await repository.getOrganizationKPIs(
+        startDate: dayStart,
+        endDate: dayEnd,
+      );
+
+      final totalCheckIns = (kpis['total_check_ins'] as int?) ?? 0;
+      if (totalCheckIns > 0) {
+        result.add(MonthlyAttendance(
+          month: dayStart,
+          attendanceRate: (kpis['avg_attendance_score'] as num?)?.toDouble() ?? 0.0,
+          punctualityRate: (kpis['punctuality_rate'] as num?)?.toDouble() ?? 0.0,
+        ));
+      } else {
+        // still add zero entries so the chart shows gaps
+        result.add(MonthlyAttendance(
+          month: dayStart,
+          attendanceRate: 0.0,
+          punctualityRate: 0.0,
+        ));
       }
+    }
+  } else if (diffDays <= 120) {
+    // Weekly buckets
+    DateTime cursor = start;
+    while (cursor.isBefore(end) || cursor.isAtSameMomentAs(end)) {
+      final weekStart = cursor;
+      final weekEnd = (cursor.add(const Duration(days: 7)).subtract(const Duration(seconds: 1))).isAfter(end)
+          ? end
+          : cursor.add(const Duration(days: 7)).subtract(const Duration(seconds: 1));
 
-      final repository = ref.read(analyticsRepositoryProvider);
-      final now = DateTime.now();
-      final List<MonthlyAttendance> result = [];
+      final kpis = await repository.getOrganizationKPIs(
+        startDate: weekStart,
+        endDate: weekEnd,
+      );
 
-      // Obtener datos de los últimos 6 meses
-      for (int i = 5; i >= 0; i--) {
-        final month = DateTime(now.year, now.month - i, 1);
-        final nextMonth = DateTime(now.year, now.month - i + 1, 1);
+      result.add(MonthlyAttendance(
+        month: weekStart,
+        attendanceRate: (kpis['avg_attendance_score'] as num?)?.toDouble() ?? 0.0,
+        punctualityRate: (kpis['punctuality_rate'] as num?)?.toDouble() ?? 0.0,
+      ));
 
-        final kpis = await repository.getOrganizationKPIs(
-          startDate: month,
-          endDate: nextMonth.subtract(const Duration(days: 1)),
-        );
+      cursor = cursor.add(const Duration(days: 7));
+    }
+  } else {
+    // Monthly buckets between start and end
+    DateTime cursor = DateTime(start.year, start.month, 1);
+    while (cursor.isBefore(end) || cursor.isAtSameMomentAs(end)) {
+      final nextMonth = DateTime(cursor.year, cursor.month + 1, 1);
+      final monthStart = cursor;
+      final monthEnd = nextMonth.subtract(const Duration(seconds: 1)).isAfter(end)
+          ? end
+          : nextMonth.subtract(const Duration(seconds: 1));
 
-        // Solo agregar meses con datos reales (al menos 1 check-in)
-        final totalCheckIns = (kpis['total_check_ins'] as int?) ?? 0;
+      final kpis = await repository.getOrganizationKPIs(
+        startDate: monthStart,
+        endDate: monthEnd,
+      );
 
-        if (totalCheckIns > 0) {
-          result.add(
-            MonthlyAttendance(
-              month: month,
-              attendanceRate:
-                  (kpis['avg_attendance_score'] as num?)?.toDouble() ?? 0.0,
-              punctualityRate:
-                  (kpis['punctuality_rate'] as num?)?.toDouble() ?? 0.0,
-            ),
-          );
-        }
-      }
+      result.add(MonthlyAttendance(
+        month: monthStart,
+        attendanceRate: (kpis['avg_attendance_score'] as num?)?.toDouble() ?? 0.0,
+        punctualityRate: (kpis['punctuality_rate'] as num?)?.toDouble() ?? 0.0,
+      ));
 
-      return result;
-    });
+      cursor = DateTime(cursor.year, cursor.month + 1, 1);
+    }
+  }
+
+  return result;
+});
 
 /// Provider de distribución de desempeño
 final performanceDistributionProvider =

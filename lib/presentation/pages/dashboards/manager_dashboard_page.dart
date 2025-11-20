@@ -20,8 +20,8 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Get real data from provider
-    final dateRange = DateRange.currentMonth();
+    // Get real data from provider (based on selected period)
+    final dateRange = _getDateRangeForPeriod();
     final kpisAsync = ref.watch(organizationKPIsProvider(dateRange));
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -211,6 +211,26 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     );
   }
 
+  DateRange _getDateRangeForPeriod() {
+    final now = DateTime.now();
+    switch (_selectedPeriod) {
+      case 'Semana':
+        return DateRange.lastWeek();
+      case 'Mes':
+        return DateRange.currentMonth();
+      case 'Trimestre':
+        // Approximate last 90 days as a quarter
+        return DateRange(
+          startDate: now.subtract(const Duration(days: 90)),
+          endDate: now,
+        );
+      case 'Año':
+        return DateRange.currentYear();
+      default:
+        return DateRange.currentMonth();
+    }
+  }
+
   Widget _buildKPIGrid(
     int totalEmployees,
     int activeToday,
@@ -367,8 +387,9 @@ class _ManagerDashboardPageState extends ConsumerState<ManagerDashboardPage> {
     );
   }
 
-Widget _buildAttendanceTrendChart() {
-  final trendAsync = ref.watch(attendanceTrendProvider);
+  Widget _buildAttendanceTrendChart() {
+  final dateRange = _getDateRangeForPeriod();
+  final trendAsync = ref.watch(attendanceTrendProvider(dateRange));
 
   return Card(
     elevation: 2,
@@ -479,15 +500,39 @@ Widget _buildAttendanceTrendChart() {
                         sideTitles: SideTitles(
                           showTitles: true,
                           getTitlesWidget: (value, meta) {
-                            if (value.toInt() >= 0 &&
-                                value.toInt() < trends.length) {
-                              final month = trends[value.toInt()].month;
+                            if (value.toInt() < 0 || value.toInt() >= trends.length) {
+                              return const Text('');
+                            }
+
+                            final item = trends[value.toInt()];
+                            // Determine label based on granularity
+                            final start = DateTime(dateRange.startDate.year, dateRange.startDate.month, dateRange.startDate.day);
+                            final end = DateTime(dateRange.endDate.year, dateRange.endDate.month, dateRange.endDate.day);
+                            final diffDays = end.difference(start).inDays.abs() + 1;
+
+                            if (diffDays <= 31) {
+                              // Daily label: day number
                               return Text(
-                                months[month.month - 1],
+                                '${item.month.day}',
+                                style: const TextStyle(fontSize: 10),
+                              );
+                            } else if (diffDays <= 120) {
+                              // Weekly label: week start day/month
+                              return Text(
+                                '${item.month.day}/${item.month.month}',
+                                style: const TextStyle(fontSize: 10),
+                              );
+                            } else {
+                              // Monthly label
+                              final months = [
+                                'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+                                'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+                              ];
+                              return Text(
+                                months[item.month.month - 1],
                                 style: const TextStyle(fontSize: 10),
                               );
                             }
-                            return const Text('');
                           },
                         ),
                       ),
